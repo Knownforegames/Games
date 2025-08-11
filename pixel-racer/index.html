@@ -3,491 +3,553 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pixel Racer — Retro + Power-Ups</title>
+<title>Pixel Racer — Retro Neon</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg1:#05060a; --bg2:#0b0e18; --ink:#e6f7ff; --muted:#7fd0e0; --border:#00f0ff88;
-    --neon1:#00f0ff; --neon2:#ff47ff; --neon3:#ffe94d; --neon4:#4dff7a; --card:#0a0d17f0;
+    --bg1:#05060a; --bg2:#0b0e18; --ink:#e6f7ff; --muted:#7fd0e0; --border:#00f0ff55;
+    --neon1:#00f0ff; --neon2:#ff47ff; --accent:#7dff7a; --warn:#ffed5a; --danger:#ff5a8a;
+    --card:#0a0d17f0; --lane:#0d1325; --glow:0 0 12px #00f0ff, 0 0 28px #00f0ff33;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0;color:var(--ink); letter-spacing:.4px;
-    font-family:'Press Start 2P', system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    margin:0;color:var(--ink);
+    font-family:'Press Start 2P',system-ui,-apple-system,Segoe UI,Roboto,Arial;
     background:
-      radial-gradient(1200px 700px at 20% -10%, #1a0f3a55 0%, transparent 60%),
-      radial-gradient(1100px 650px at 110% 10%, #003a4450 0%, transparent 60%),
-      linear-gradient(180deg,var(--bg1),var(--bg2));
+      radial-gradient(1200px 700px at 20% -10%, #0d1b2aff 0%, #0a0d17 35%, #05060a 100%),
+      radial-gradient(800px 600px at 120% 120%, #210b24 0%, transparent 60%);
+    letter-spacing:.5px;
+    display:flex;align-items:center;justify-content:center;padding:16px;
   }
-  /* CRT scanlines + vignette */
-  body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0}
-  body::before{
-    background:repeating-linear-gradient(to bottom,rgba(255,255,255,.06) 0,rgba(255,255,255,.06) 1px,transparent 2px,transparent 4px);
-    mix-blend-mode:overlay;
+  .wrap{
+    width:min(94vw, 900px);
   }
-  body::after{background:radial-gradient(1200px 700px at 50% -10%,transparent 40%,rgba(0,0,0,.55) 100%)}
-
-  .wrap{max-width:980px;margin:0 auto;padding:16px;position:relative;z-index:1}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-  h1{margin:0;font-size:clamp(16px,3.6vw,24px);text-shadow:0 0 6px var(--neon1),0 0 12px var(--neon2)}
-  .btn{border:2px solid var(--neon2);background:#000;color:#fff;border-radius:6px;padding:8px 12px;cursor:pointer;box-shadow:0 0 12px var(--neon2)}
-  .panel{border:2px solid var(--border);background:var(--card);border-radius:14px;padding:12px}
-
-  .grid{display:grid;grid-template-columns:3fr 1fr;gap:12px}
-  @media (max-width:900px){.grid{grid-template-columns:1fr}}
-  canvas{display:block;width:100%;height:auto;background:#000;border:2px solid var(--border);border-radius:10px;image-rendering:pixelated}
-
-  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
-  .stat{border:2px solid var(--border);background:#0008;border-radius:10px;padding:10px;text-align:center}
-  .label{font-size:12px;color:var(--muted)} .value{font-size:18px}
-
-  .section-title{margin:14px 0 8px}
-
-  /* Turbo meter */
-  .meter{height:12px;background:#000;border:2px solid var(--neon1);border-radius:8px;overflow:hidden}
-  .meter>div{height:100%;width:0%;background:linear-gradient(90deg,var(--neon3),var(--neon2));box-shadow:0 0 12px var(--neon2)}
-
-  /* Active power-ups list */
-  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .badge{font-size:10px;padding:6px 8px;border-radius:6px;background:#000;border:2px solid var(--neon4);box-shadow:0 0 10px var(--neon4);color:#eafff3}
-
-  /* Mobile lane + turbo buttons */
-  .controls{display:none;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap}
-  .cbtn{width:140px;height:60px;border-radius:8px;background:#000;border:2px solid var(--neon1);
-        color:#eaf8ff; box-shadow:0 0 10px var(--neon1);}
-  .turboBtn{width:300px}
-
-  @media (pointer:none), (pointer:coarse){ .controls{display:flex} }
-
-  .hint{margin-top:8px;color:var(--muted);font-size:10px}
-
-  /* Pause / Game over overlay */
-  .overlay{position:absolute;inset:12px;display:none;place-items:center;background:rgba(0,0,0,.45);border-radius:12px}
-  .dialog{border:2px solid var(--border);background:#0f172acc;border-radius:10px;padding:16px;text-align:center}
-  .dialog h2{margin:0 0 8px}
+  header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;
+  }
+  .logo{
+    display:flex;align-items:center;gap:10px;
+    filter:drop-shadow(0 0 10px #00f0ff80);
+  }
+  .cube{width:18px;height:18px;border:3px solid var(--neon1);border-radius:4px;box-shadow:var(--glow)}
+  .title{font-size:clamp(18px,3vw,26px);text-shadow:0 2px 0 #000, 0 0 18px #00f0ff60}
+  .btn{
+    border:2px solid var(--border);color:var(--ink);background:linear-gradient(180deg,#0d1320,#090c16);
+    padding:10px 14px;border-radius:12px;cursor:pointer;transition:transform .05s ease;
+    box-shadow:0 0 0 2px #000 inset, 0 0 18px #00f0ff22;
+    font-size:12px;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{border-color:#00f0ff99;box-shadow:0 0 0 2px #000 inset, 0 0 28px #00f0ffaa}
+  .grid{
+    display:grid;grid-template-columns:1fr 420px;gap:16px;
+  }
+  @media (max-width: 860px){
+    .grid{grid-template-columns:1fr}
+  }
+  .card{
+    background:var(--card);border:2px solid var(--border);border-radius:18px;padding:14px;
+    box-shadow:0 0 24px #000 inset, 0 0 26px #00f0ff18;
+  }
+  .hud{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px
+  }
+  .pill{
+    font-size:11px;padding:8px 10px;border:2px solid var(--border);border-radius:999px;background:#0c1221;
+    box-shadow:0 0 14px #00f0ff33
+  }
+  .pill .dot{display:inline-block;width:10px;height:10px;border:2px solid var(--neon1);margin-right:6px;border-radius:3px}
+  .label{color:var(--muted);font-size:10px;opacity:.9}
+  .value{margin-left:8px}
+  canvas{display:block;width:100%;height:auto;border-radius:16px;border:2px solid var(--border);background:#04060c}
+  .side h3{margin:0 0 10px;font-size:14px;color:var(--muted)}
+  ul{margin:0;padding-left:18px;font-size:11px;line-height:1.5}
+  .kbd{border:2px solid var(--border);padding:3px 6px;border-radius:8px;font-size:10px;background:#0b1020}
+  footer{margin-top:10px;color:#8bd0ff88;font-size:10px;text-align:center}
+  .flash{animation:flash .15s ease}
+  @keyframes flash{from{filter:drop-shadow(0 0 0 #fff)}to{filter:drop-shadow(0 0 22px #fff)}}
+  .badge{padding:6px 8px;border:2px solid var(--border);border-radius:10px;font-size:10px;display:inline-flex;gap:6px;align-items:center}
+  .pow-dot{width:10px;height:10px;border-radius:2px;background:var(--neon2);box-shadow:0 0 10px var(--neon2)}
+  .pow-dot.shield{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .pow-dot.slow{background:var(--warn);box-shadow:0 0 10px var(--warn)}
+  .tapzones{position:absolute;inset:0;display:none}
+  .zone{position:absolute;top:0;bottom:0;width:34%}
+  .zone.left{left:0}
+  .zone.right{right:0}
+  .zone.mid{left:33%;right:33%}
+  @media (hover:none){
+    .tapzones{display:block}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>🚗 Pixel Racer (Retro)</h1>
-    <div>
-      <a class="btn" href="../">← Back</a>
-      <button id="pauseBtn" class="btn">Pause</button>
-      <button id="resetBtn" class="btn">Reset</button>
+    <div class="logo">
+      <div class="cube"></div>
+      <div class="title">Pixel Racer</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="btnPause" class="btn">Pause</button>
+      <button id="btnSound" class="btn">Sound: On</button>
+      <button id="btnReset" class="btn primary">Restart</button>
     </div>
   </header>
 
   <div class="grid">
-    <section class="panel" style="position:relative">
-      <canvas id="cv" width="480" height="720"></canvas>
-
-      <div id="overlay" class="overlay">
-        <div class="dialog">
-          <h2 id="state">PAUSED</h2>
-          <div class="label" style="margin-bottom:12px">
-            Score <b id="ovScore">0</b> • Best <b id="ovBest">0</b>
-          </div>
-          <button id="resumeBtn" class="btn">Resume</button>
+    <div class="card">
+      <div class="hud">
+        <div class="pill"><span class="dot"></span><span class="label">Score</span><span id="score" class="value">00000</span></div>
+        <div class="pill"><span class="dot"></span><span class="label">High</span><span id="best" class="value">00000</span></div>
+        <div class="pill"><span class="dot"></span><span class="label">Speed</span><span id="speed" class="value">0</span></div>
+        <div class="badge"><div class="pow-dot"></div>Turbo <span id="turboCnt">x0</span></div>
+        <div class="badge"><div class="pow-dot shield"></div>Shield <span id="shieldCnt">x0</span></div>
+        <div class="badge"><div class="pow-dot slow"></div>Slow-Mo <span id="slowCnt">x0</span></div>
+      </div>
+      <div style="position:relative">
+        <canvas id="game" width="420" height="700"></canvas>
+        <div class="tapzones" id="tapzones">
+          <div class="zone left"></div>
+          <div class="zone mid"></div>
+          <div class="zone right"></div>
         </div>
       </div>
+    </div>
 
-      <div class="controls">
-        <button class="cbtn" data-x="-1">◀ LEFT</button>
-        <button class="cbtn" data-x="+1">RIGHT ▶</button>
-        <button id="turboTouch" class="cbtn turboBtn">💥 TURBO</button>
-      </div>
-      <div class="hint">Keys: ←/→ (A/D) lanes • Hold **SHIFT** for TURBO • P pause • R restart • Mobile: use big buttons</div>
-    </section>
-
-    <aside class="panel">
-      <h3 class="section-title">Stats</h3>
-      <div class="stats">
-        <div class="stat"><div class="label">Score</div><div id="score" class="value">0</div></div>
-        <div class="stat"><div class="label">Best</div><div id="best" class="value">0</div></div>
-      </div>
-
-      <h3 class="section-title">Turbo</h3>
-      <div class="meter" aria-label="Turbo meter"><div id="turboBar"></div></div>
-      <div class="label" id="turboLabel" style="margin-top:6px">Charge by driving & coins. Hold SHIFT to boost.</div>
-
-      <h3 class="section-title">Power-ups</h3>
-      <div class="label">Pickups spawn on lanes:</div>
-      <ul class="label" style="margin:6px 0 8px 18px">
-        <li>🛡 Shield (one crash forgiveness)</li>
-        <li>⏳ Slow-Mo (traffic slowed)</li>
+    <div class="card side">
+      <h3>How to play</h3>
+      <ul>
+        <li>Move: <span class="kbd">←</span>/<span class="kbd">→</span> or <span class="kbd">A</span>/<span class="kbd">D</span> (swipe on mobile)</li>
+        <li>Turbo: <span class="kbd">Space</span> (needs charge)</li>
+        <li>Slow-Mo: <span class="kbd">S</span> (if available)</li>
+        <li>Pause: <span class="kbd">P</span> or button</li>
       </ul>
-      <div class="badges" id="badges"></div>
-
-      <div class="stat" style="margin-top:12px"><div class="label">Coins</div><div id="coins" class="value">0</div></div>
-    </aside>
+      <p style="margin-top:10px;font-size:11px;color:#9fe0ffcc">
+        Grab coins for points. Power-ups:
+      </p>
+      <ul>
+        <li><span style="color:var(--neon2)">Turbo</span> – burst of speed & coin magnet.</li>
+        <li><span style="color:var(--accent)">Shield</span> – survive one crash.</li>
+        <li><span style="color:var(--warn)">Slow-Mo</span> – time dilation for 3s.</li>
+      </ul>
+      <p class="label" style="margin-top:10px">
+        Tip: the longer you survive, the faster traffic gets.
+      </p>
+    </div>
   </div>
+
+  <footer>Built with ❤️ for your GameDock. No libraries, runs 100% in-browser.</footer>
 </div>
 
 <script>
-/* ====== Setup ====== */
-const cv = document.getElementById('cv');
-const cx = cv.getContext('2d');
-const W = cv.width, H = cv.height;
+(()=>{
+// ----- Settings -----
+const W = 420, H = 700;
+const LANES = 3;
+const LANE_W = W / LANES;
+const ROAD_MARGIN = 18;
+const PLAYER_W = 38, PLAYER_H = 58;
+const CAR_W = 38, CAR_H = 58;
+const COIN_SIZE = 16;
 
-const scoreEl = document.getElementById('score');
-const bestEl = document.getElementById('best');
-const coinsEl = document.getElementById('coins');
+const COLORS = {
+  lane:'#0e1430', line:'#18224d', dash:'#1e2b63',
+  player:'#7fd0e0', enemy:'#ff47ff', coin:'#ffed5a',
+  turbo:'#ff47ff', shield:'#7dff7a', slow:'#ffed5a',
+  text:'#e6f7ff', trail:'#00f0ff'
+};
 
-const overlay = document.getElementById('overlay');
-const stateEl = document.getElementById('state');
-const ovScore = document.getElementById('ovScore');
-const ovBest = document.getElementById('ovBest');
+const START_SPEED = 3.2;
+const MAX_SPEED = 9.5;
+const SPAWN_EVERY = 600; // ms baseline
+const COIN_EVERY = 480;
+const POW_EVERY = 3000;
 
-const pauseBtn = document.getElementById('pauseBtn');
-const resetBtn = document.getElementById('resetBtn');
-const resumeBtn = document.getElementById('resumeBtn');
+// ----- State -----
+let ctx, raf, last = 0, acc = 0;
+let game, paused=false, sounds=true;
+let speed = START_SPEED;
+let score = 0, best = +localStorage.getItem('pxr_best')||0;
+let laneX = i => Math.floor(i)*LANE_W + LANE_W/2;
+let player, cars=[], coins=[], pows=[], particles=[];
+let powCounts = { turbo:0, shield:0, slow:0 };
+let timers = { spawn:0, coin:0, pow:0, turbo:0, slow:0 };
+let magnet=false;
+let swipeStart=null;
 
-const turboBar = document.getElementById('turboBar');
-const turboLabel = document.getElementById('turboLabel');
-const badgesEl = document.getElementById('badges');
-const turboTouch = document.getElementById('turboTouch');
+// ----- Audio (tiny beeps) -----
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+const beep = (f=440,t=0.08,type='sine',gain=0.04)=>{
+  if(!sounds) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type=type; o.frequency.value=f;
+  g.gain.value=gain; o.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime+t);
+};
 
-const HS_KEY = 'pixelracer.best.v2';
-let best = +localStorage.getItem(HS_KEY) || 0; bestEl.textContent = best;
+// ----- Utility -----
+const rnd = (a,b)=>Math.random()*(b-a)+a;
+const choice = arr => arr[Math.floor(Math.random()*arr.length)];
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 
-/* ====== Audio (simple beeps) ====== */
-const AC = window.AudioContext || window.webkitAudioContext;
-const actx = new AC();
-function blip(freq=800,dur=0.06, type='square', vol=0.1){
-  const o = actx.createOscillator(), g = actx.createGain();
-  o.type=type; o.frequency.value=freq;
-  g.gain.setValueAtTime(0, actx.currentTime);
-  g.gain.linearRampToValueAtTime(vol, actx.currentTime+0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
-  o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+dur);
-}
-const sfx = {
-  coin: ()=> blip(1200,0.07,'triangle',0.12),
-  lane: ()=> blip(600,0.05,'square',0.08),
-  crash:()=> { blip(200,0.18,'sawtooth',0.15); setTimeout(()=>blip(120,0.2,'sawtooth',0.13),80); },
-  pu:   ()=> blip(900,0.1,'triangle',0.14),
-  turboOn: ()=> { blip(700,0.06,'square',0.14); setTimeout(()=>blip(1000,0.06,'square',0.14),70); },
-  turboOff:()=> blip(400,0.08,'sine',0.12),
-  shieldBreak:()=> { blip(500,0.06,'triangle',0.12); setTimeout(()=>blip(350,0.09,'sawtooth',0.13),50); }
-}
-
-/* ====== Game State ====== */
-const lanes = 3;
-const laneW = W/lanes;
-
-let player;           // {lane,y,w,h,color}
-let objs = [];        // cars / coins / powerups
-let roadY = 0;        // scrolling background
-let baseSpeed = 4;    // base world speed
-let score = 0, coins = 0;
-let running = true, paused = false, over = false;
-
-// Turbo
-const turbo = {charge:0, max:100, active:false, drain:40 /* per second */, gainCoin:12, gainTime:0.06}; // charge/time gains
-// Power-ups state
-let shield = 0;               // 0/1 (one-hit protect)
-let slowmo = 0;               // ms remaining
-
+// ----- Entities -----
 function reset(){
-  objs.length = 0;
-  player = { lane:1, y:H-120, w:laneW*0.55, h:70, color:'#e6f7ff' };
-  baseSpeed = 4; score = 0; coins = 0; running=true; paused=false; over=false;
-  roadY = 0; lastSpawn = 0; spawnBase = 900;
-  turbo.charge = 0; turbo.active = false;
-  shield = 0; slowmo = 0;
+  speed = START_SPEED;
+  score = 0; updateHUD();
+  cars.length=0; coins.length=0; pows.length=0; particles.length=0;
+  timers = { spawn:0, coin:0, pow:0, turbo:0, slow:0 };
+  powCounts = { turbo:0, shield:0, slow:0 };
+  player = {
+    lane:1, x: laneX(1)-PLAYER_W/2, y:H-PLAYER_H-30,
+    w:PLAYER_W, h:PLAYER_H, alive:true, shield:false, inv:0
+  };
+  paused=false;
+}
+
+function spawnCar(){
+  const lane = Math.floor(Math.random()*LANES);
+  const minGap = 120 + speed*6;
+  // prevent immediate collisions above last car in same lane
+  const topInLane = cars.filter(c=>c.lane===lane).sort((a,b)=>a.y-b.y)[0];
+  if(topInLane && topInLane.y < -minGap) return; 
+  cars.push({lane, x: laneX(lane)-CAR_W/2, y:-CAR_H-10, w:CAR_W, h:CAR_H, v: speed + rnd(.5,2)});
+}
+
+function spawnCoin(){
+  const lane = Math.floor(Math.random()*LANES);
+  coins.push({lane, x: laneX(lane)-COIN_SIZE/2, y:-COIN_SIZE, s:COIN_SIZE, v: speed, t:0});
+}
+
+function spawnPow(){
+  const lane = Math.floor(Math.random()*LANES);
+  const type = choice(['turbo','shield','slow']);
+  pows.push({type, lane, x: laneX(lane)-16, y:-24, w:32, h:24, v:speed});
+}
+
+function part(x,y,c){
+  particles.push({x,y,dx:rnd(-.6,.6),dy:rnd(-1.4,-.3),life:1,c});
+}
+
+// ----- Rendering -----
+function drawRoad(){
+  ctx.fillStyle = COLORS.lane;
+  ctx.fillRect(ROAD_MARGIN,0,W-ROAD_MARGIN*2,H);
+
+  // lane lines
+  ctx.strokeStyle = COLORS.line;
+  ctx.lineWidth = 2;
+  for(let i=1;i<LANES;i++){
+    const x = LANE_W*i;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+  }
+  // moving dashes
+  ctx.strokeStyle = COLORS.dash;
+  ctx.lineWidth = 6; ctx.setLineDash([18,22]);
+  ctx.lineDashOffset = -(score/4)%40;
+  ctx.beginPath();
+  const center = laneX(1);
+  ctx.moveTo(center,0); ctx.lineTo(center,H); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function rect(x,y,w,h,c,stroke=true){
+  ctx.fillStyle=c; ctx.fillRect(x,y,w,h);
+  if(stroke){ ctx.strokeStyle = '#00000088'; ctx.lineWidth=2; ctx.strokeRect(x+.5,y+.5,w-1,h-1); }
+}
+
+function carSprite(x,y,w,h,color){
+  rect(x,y,w,h,color);
+  // headlights/taillights
+  rect(x+6,y+6,w-12,8,'#00000055',false);
+  rect(x+6,y+h-14,w-12,8,'#00000055',false);
+}
+
+function coinSprite(x,y,s){
+  ctx.fillStyle = COLORS.coin; ctx.beginPath();
+  ctx.arc(x+s/2,y+s/2,s/2,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#00000088'; ctx.stroke();
+}
+
+function powSprite(p){
+  const c = p.type==='turbo'?COLORS.turbo:p.type==='shield'?COLORS.shield:COLORS.slow;
+  rect(p.x,p.y,p.w,p.h,c);
+  ctx.fillStyle='#051018'; ctx.font='bold 12px "Press Start 2P"';
+  ctx.fillText(p.type==='turbo'?'T':p.type==='shield'?'S':'⏱', p.x+9, p.y+16);
+}
+
+function drawHUDText(){
+  ctx.fillStyle = '#7fd0e0aa';
+  ctx.font = '10px "Press Start 2P"';
+  ctx.fillText('← → Move | Space Turbo | S Slow-Mo | P Pause', 10, 16);
+}
+
+function drawOverlay(text, sub){
+  ctx.fillStyle = '#000000aa'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = COLORS.text;
+  ctx.textAlign='center';
+  ctx.font='20px "Press Start 2P"';
+  ctx.fillText(text, W/2, H/2-10);
+  ctx.font='12px "Press Start 2P"';
+  if(sub) ctx.fillText(sub, W/2, H/2+18);
+  ctx.textAlign='left';
+}
+
+// ----- Logic -----
+function laneToX(l){ return laneX(l) - PLAYER_W/2; }
+
+function collide(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
+
+function step(dt){
+  if(paused) return;
+
+  // speed ramp
+  speed = clamp(speed + dt*0.00055, START_SPEED, MAX_SPEED);
+
+  // spawn timers
+  timers.spawn += dt;
+  if(timers.spawn > SPAWN_EVERY - speed*40){ timers.spawn=0; spawnCar(); }
+
+  timers.coin += dt;
+  if(timers.coin > COIN_EVERY - speed*20){ timers.coin=0; spawnCoin(); }
+
+  timers.pow += dt;
+  if(timers.pow > POW_EVERY){ timers.pow=0; spawnPow(); }
+
+  // update cars
+  for(const c of cars){ c.y += c.v; }
+
+  // update coins
+  for(const c of coins){
+    c.y += speed;
+    c.t += dt;
+    if(magnet){
+      const dx = (player.x+PLAYER_W/2) - (c.x+COIN_SIZE/2);
+      c.x += clamp(dx,-1.8,1.8);
+    }
+  }
+
+  // update powerups
+  for(const p of pows){ p.y += speed; }
+
+  // particles
+  for(const p of particles){ p.x+=p.dx; p.y+=p.dy; p.life-=dt*0.002; }
+  particles = particles.filter(p=>p.life>0);
+
+  // player invincibility decay
+  if(player.inv>0) player.inv -= dt;
+
+  // slow-mo timer
+  if(timers.slow>0){ timers.slow -= dt; if(timers.slow<=0) speed = Math.max(speed, START_SPEED); }
+  // turbo timer
+  if(timers.turbo>0){ timers.turbo -= dt; if(timers.turbo<=0){ magnet=false; } }
+
+  // collisions
+  // coins
+  for(let i=coins.length-1;i>=0;i--){
+    const c=coins[i];
+    if(c.y>H+8){ coins.splice(i,1); continue; }
+    if(collide(player,{x:c.x,y:c.y,w:c.s,h:c.s})){
+      coins.splice(i,1);
+      score += 25; updateHUD(true);
+      part(c.x,c.y,COLORS.coin); beep(880,.06,'square',0.03);
+    }
+  }
+  // powerups
+  for(let i=pows.length-1;i>=0;i--){
+    const p=pows[i];
+    if(p.y>H+24){ pows.splice(i,1); continue; }
+    if(collide(player,p)){
+      pows.splice(i,1);
+      if(p.type==='turbo'){ powCounts.turbo++; flash('#ff47ff'); }
+      if(p.type==='shield'){ powCounts.shield++; flash('#7dff7a'); }
+      if(p.type==='slow'){ powCounts.slow++; flash('#ffed5a'); }
+      updateHUD();
+      beep(1200,.09,'triangle',0.04);
+    }
+  }
+  // cars
+  for(let i=cars.length-1;i>=0;i--){
+    const e=cars[i];
+    if(e.y>H+CAR_H){ cars.splice(i,1); continue; }
+    if(player.inv<=0 && collide(player,e)){
+      if(player.shield || powCounts.shield>0){
+        player.shield=false; if(powCounts.shield>0) powCounts.shield--;
+        player.inv = 1000; // 1s invuln
+        for(let k=0;k<12;k++) part(player.x+PLAYER_W/2,player.y+PLAYER_H/2,COLORS.shield);
+        updateHUD(); beep(200,.1,'sawtooth',0.05);
+      }else{
+        gameOver();
+        return;
+      }
+    }
+  }
+
+  // scoring
+  score += Math.floor(speed*2);
   updateHUD();
-  hideOverlay();
+
+  // cleanup offscreen particles
 }
 
-/* ====== Spawning ====== */
-let lastSpawn = 0;
-let spawnBase = 900; // smaller = more spawns
-
-function rand(min,max){ return Math.random()*(max-min)+min; }
-function pick(a){ return a[(Math.random()*a.length)|0]; }
-
-function spawn(){
-  const lane = (Math.random()*lanes)|0;
-  const x = lane*laneW + laneW*0.5;
-  const roll = Math.random();
-  if(roll < 0.60){ // enemy car
-    const carW = laneW*0.55, carH = rand(70,100);
-    objs.push({type:'car',lane,x,y:-carH, w:carW, h:carH, color: pick(['#00f0ff','#ff47ff','#ffe94d','#4dff7a','#22a3ff'])});
-  }else if(roll < 0.82){ // coin
-    const r = laneW*0.22;
-    objs.push({type:'coin',lane,x,y:-r*2, r, color:'#ffe94d'});
-  }else{ // power-up (shield / slowmo)
-    const kind = Math.random() < 0.5 ? 'shield' : 'slow';
-    const r = laneW*0.22;
-    objs.push({type:'pu',kind,lane,x,y:-r*2, r});
-  }
+function gameOver(){
+  paused=true;
+  best = Math.max(best, score); localStorage.setItem('pxr_best', best);
+  updateHUD();
+  beep(160,.2,'sawtooth',0.06);
 }
 
-/* ====== Input ====== */
-function moveLane(d){
-  if(!running || paused) return;
-  const nl = Math.max(0, Math.min(lanes-1, player.lane + d));
-  if(nl !== player.lane){ player.lane = nl; sfx.lane(); }
+// ----- Controls -----
+function move(dir){
+  if(!player.alive) return;
+  player.lane = clamp(player.lane + dir, 0, LANES-1);
+  player.x = laneToX(player.lane);
+  for(let k=0;k<4;k++) part(player.x+PLAYER_W/2,player.y+PLAYER_H/2,COLORS.trail);
 }
-function setTurbo(active){
-  if(active && !turbo.active && turbo.charge>0){
-    turbo.active = true; sfx.turboOn();
-  }else if(!active && turbo.active){
-    turbo.active = false; sfx.turboOff();
-  }
+function doTurbo(){
+  if(powCounts.turbo<=0) return;
+  powCounts.turbo--; updateHUD();
+  timers.turbo = 1500; magnet=true;
+  // burst particles
+  for(let k=0;k<20;k++) part(player.x+PLAYER_W/2,player.y+PLAYER_H, COLORS.turbo);
+  beep(900,.16,'square',0.06);
 }
-window.addEventListener('keydown', e=>{
-  const k = e.key.toLowerCase();
-  if(k==='arrowleft' || k==='a') moveLane(-1);
-  if(k==='arrowright'|| k==='d') moveLane(+1);
-  if(k==='p') togglePause();
-  if(k==='r') reset();
-  if(e.key==='Shift') setTurbo(true);
-});
-window.addEventListener('keyup', e=>{
-  if(e.key==='Shift') setTurbo(false);
-});
-
-document.querySelectorAll('.cbtn').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    const dir = b.dataset.x === '+1' ? 1 : -1;
-    moveLane(dir);
-  });
-});
-turboTouch.addEventListener('touchstart', e=>{ e.preventDefault(); setTurbo(true); }, {passive:false});
-turboTouch.addEventListener('touchend',   ()=> setTurbo(false));
-
-pauseBtn.onclick = ()=> togglePause();
-resetBtn.onclick = ()=> reset();
-resumeBtn.onclick = ()=> togglePause();
-
+function doSlow(){
+  if(powCounts.slow<=0) return;
+  powCounts.slow--; updateHUD();
+  timers.slow = 3000;
+  speed = Math.max(2.2, speed*0.45);
+  beep(500,.12,'sine',0.05);
+}
 function togglePause(){
-  if(over){ reset(); return; }
   paused = !paused;
-  stateEl.textContent = paused ? 'PAUSED' : 'RUNNING';
-  overlay.style.display = paused ? 'grid' : 'none';
+  document.getElementById('btnPause').textContent = paused?'Resume':'Pause';
+  if(!paused){ last = performance.now(); raf = requestAnimationFrame(loop); }
 }
 
-/* ====== HUD ====== */
-function updateHUD(){
-  scoreEl.textContent = score;
-  coinsEl.textContent = coins;
-  bestEl.textContent = best;
-  turboBar.style.width = (100*Math.min(1, turbo.charge/turbo.max)).toFixed(1) + '%';
-  // badges
-  badgesEl.innerHTML = '';
-  if(shield>0){ addBadge('🛡 Shield'); }
-  if(slowmo>0){ addBadge('⏳ Slow-Mo'); }
-  function addBadge(txt){
-    const b = document.createElement('div');
-    b.className='badge'; b.textContent = txt;
-    badgesEl.appendChild(b);
-  }
+function flash(){
+  document.querySelector('canvas').classList.add('flash');
+  setTimeout(()=>document.querySelector('canvas').classList.remove('flash'),140);
 }
 
-/* ====== Loop ====== */
-let last = 0;
+// ----- HUD -----
+function updateHUD(pop){
+  const s = document.getElementById('score');
+  s.textContent = String(score).padStart(5,'0');
+  if(pop){ s.style.transform='scale(1.1)'; setTimeout(()=>s.style.transform='',80); }
+  document.getElementById('best').textContent = String(best).padStart(5,'0');
+  document.getElementById('speed').textContent = (speed*10|0);
+  document.getElementById('turboCnt').textContent = 'x'+powCounts.turbo;
+  document.getElementById('shieldCnt').textContent = 'x'+(powCounts.shield + (player.shield?1:0));
+  document.getElementById('slowCnt').textContent = 'x'+powCounts.slow;
+}
+
+// ----- Loop -----
 function loop(t){
-  requestAnimationFrame(loop);
-  if(!running) return;
-  if(!last) last = t;
-  const dt = Math.min(32, t-last); last = t;
-  if(paused) { draw(); return; }
+  const dt = t - last; last = t;
+  const slowFactor = timers.slow>0 ? 0.45 : 1;
+  const timeStep = dt * slowFactor;
 
-  // difficulty scale
-  if(score && score % 20 === 0) baseSpeed = Math.min(14, 4 + Math.floor(score/20));
+  ctx.clearRect(0,0,W,H);
+  drawRoad();
 
-  // slow-mo factor
-  if(slowmo>0){ slowmo = Math.max(0, slowmo - dt); }
-  const slowFactor = slowmo>0 ? 0.45 : 1;
+  // update logic
+  step(timeStep);
 
-  // turbo drain/charge
-  if(turbo.active){
-    turbo.charge = Math.max(0, turbo.charge - turbo.drain*(dt/1000));
-    if(turbo.charge<=0) setTurbo(false);
-  }else{
-    turbo.charge = Math.min(turbo.max, turbo.charge + turbo.gainTime*dt); // passive charge over time
-  }
+  // draw cars
+  for(const e of cars){ carSprite(e.x,e.y,e.w,e.h,COLORS.enemy); }
+  // draw coins
+  for(const c of coins){ coinSprite(c.x,c.y,c.s); }
+  // draw powerups
+  for(const p of pows){ powSprite(p); }
 
-  // world speed
-  const speed = baseSpeed * (turbo.active ? 1.85 : 1) * slowFactor;
-  const s = speed * (dt/16);
-  roadY += s;
-
-  // spawn logic
-  lastSpawn += dt;
-  if(lastSpawn >= spawnBase){
-    spawn();
-    lastSpawn = 0;
-    // quicker spawns as baseSpeed grows
-    spawnBase = Math.max(260, 900 - baseSpeed*60);
-  }
-
-  // move objects
-  for(let i=objs.length-1;i>=0;i--){
-    const o = objs[i];
-    o.y += s*1.1;
-
-    // collisions
-    if(o.type==='car'){
-      const px = player.lane*laneW + laneW*0.22;
-      if( AABB(px, player.y, player.w, player.h, o.x - o.w/2, o.y, o.w, o.h) ){
-        if(shield>0){
-          shield = 0; sfx.shieldBreak();
-          objs.splice(i,1); // smash the car
-        }else{
-          crash(); break;
-        }
+  // draw player
+  if(player.alive){
+    if(player.inv>0 && (Math.floor(player.inv/80)%2===0)) {
+      // blink while invincible
+    } else {
+      carSprite(player.x,player.y,player.w,player.h, COLORS.player);
+      if(timers.turbo>0){
+        ctx.fillStyle = COLORS.turbo+'66';
+        ctx.fillRect(player.x+6, player.y+player.h, player.w-12, 10);
       }
-    }else if(o.type==='coin'){
-      const px = player.lane*laneW + laneW*0.5;
-      const dx=px - o.x, dy = (player.y+player.h/2) - (o.y+o.r);
-      if(Math.hypot(dx,dy) < o.r + Math.min(player.w,player.h)/3){
-        coins += 1; score += 5; sfx.coin(); objs.splice(i,1);
-        turbo.charge = Math.min(turbo.max, turbo.charge + turbo.gainCoin); // coin supercharges turbo
-      }
-    }else if(o.type==='pu'){
-      const px = player.lane*laneW + laneW*0.5;
-      const dx=px - o.x, dy = (player.y+player.h/2) - (o.y+o.r);
-      if(Math.hypot(dx,dy) < o.r + Math.min(player.w,player.h)/3){
-        sfx.pu();
-        if(o.kind==='shield') shield = 1;
-        else if(o.kind==='slow') slowmo = 4000; // 4s slow-mo
-        objs.splice(i,1);
+      if(player.shield || powCounts.shield>0){
+        ctx.strokeStyle = COLORS.shield; ctx.lineWidth=2;
+        ctx.strokeRect(player.x-3,player.y-3,player.w+6,player.h+6);
       }
     }
-
-    // remove off-screen; scoring
-    if(o.y > H + 40){
-      if(o.type==='car') score += 1; // passing traffic scores
-      objs.splice(i,1);
-    }
+  }
+  // particles
+  for(const p of particles){
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.c; ctx.fillRect(p.x,p.y,2,2);
+    ctx.globalAlpha = 1;
   }
 
-  draw(); updateHUD();
+  drawHUDText();
+
+  if(paused){
+    drawOverlay('Paused', 'Press P or click Resume');
+    return;
+  }
+  raf = requestAnimationFrame(loop);
 }
 
-function AABB(ax,ay,aw,ah,bx,by,bw,bh){
-  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
-}
+// ----- Boot -----
+function init(){
+  const c = document.getElementById('game');
+  ctx = c.getContext('2d');
+  game = c;
+  reset();
+  updateHUD();
+  last = performance.now();
+  raf = requestAnimationFrame(loop);
 
-/* ====== Draw ====== */
-function draw(){
-  // road bg (turbo glow)
-  const g = cx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, turbo.active ? '#0a1e3f' : '#09122a');
-  g.addColorStop(1, '#050914');
-  cx.fillStyle = g; cx.fillRect(0,0,W,H);
-
-  // lane lines (dash scroll)
-  cx.strokeStyle = turbo.active ? 'rgba(255,71,255,0.35)' : 'rgba(0,240,255,0.25)';
-  cx.lineWidth = 2;
-  for(let i=1;i<lanes;i++){
-    cx.setLineDash([18,18]);
-    cx.lineDashOffset = -(roadY%36);
-    cx.beginPath(); cx.moveTo(i*laneW,0); cx.lineTo(i*laneW,H); cx.stroke();
-  }
-  cx.setLineDash([]);
-
-  // objects
-  objs.forEach(o=>{
-    if(o.type==='car'){
-      drawCar(o.x - o.w/2, o.y, o.w, o.h, o.color);
-    }else if(o.type==='coin'){
-      drawCoin(o.x, o.y, o.r);
-    }else if(o.type==='pu'){
-      drawPU(o.x, o.y, o.r, o.kind);
-    }
+  // input
+  addEventListener('keydown', e=>{
+    if(e.repeat) return;
+    if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') move(-1);
+    else if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') move(1);
+    else if(e.key===' '){ e.preventDefault(); doTurbo(); }
+    else if(e.key==='s'||e.key==='S') doSlow();
+    else if(e.key==='p'||e.key==='P') togglePause();
   });
 
-  // player
-  const px = player.lane*laneW + laneW*0.22;
-  drawCar(px, player.y, player.w, player.h, player.color);
-  if(shield>0){ // shield aura
-    cx.strokeStyle = 'rgba(77,255,122,0.8)';
-    cx.lineWidth = 3;
-    roundRect(px-6, player.y-6, player.w+12, player.h+12, 12);
-    cx.stroke();
-  }
+  // mobile swipe + tap zones
+  const tz = document.getElementById('tapzones');
+  tz.addEventListener('touchstart', e=>{
+    swipeStart = e.touches[0].clientX;
+  }, {passive:true});
+  tz.addEventListener('touchmove', e=>{
+    if(!swipeStart) return;
+    const dx = e.touches[0].clientX - swipeStart;
+    if(Math.abs(dx) > 40){
+      move(dx>0?1:-1); swipeStart=null;
+    }
+  }, {passive:true});
+  tz.addEventListener('touchend', e=>{
+    // center tap triggers turbo, side taps move
+    const x = (e.changedTouches[0]||{}).clientX;
+    const w = tz.clientWidth;
+    if(x<w*0.33) move(-1);
+    else if(x>w*0.66) move(1);
+    else doTurbo();
+  });
 
-  // score readout
-  cx.fillStyle = '#e6f7ff'; cx.font = '14px "Press Start 2P"';
-  cx.fillText('SCORE '+score, 12, 24);
-  cx.fillText('BEST '+best, 12, 46);
-  cx.fillText('SPD '+(turbo.active?'MAX':Math.round(baseSpeed)), 12, 68);
-  if(turbo.active){
-    cx.fillStyle = '#ff47ff';
-    cx.fillText('TURBO!', W-130, 24);
-  }
-}
+  // buttons
+  document.getElementById('btnPause').onclick=togglePause;
+  document.getElementById('btnReset').onclick=()=>{ reset(); if(paused){togglePause();} };
+  document.getElementById('btnSound').onclick=()=>{
+    sounds=!sounds; document.getElementById('btnSound').textContent='Sound: '+(sounds?'On':'Off');
+    if(sounds) beep(660,.06,'square',0.03);
+  };
 
-function drawCar(x,y,w,h,color){
-  const lg = cx.createLinearGradient(x,y,x+w,y+h);
-  lg.addColorStop(0,color);
-  lg.addColorStop(1,'#ffffff22');
-  cx.fillStyle = lg; roundRect(x,y,w,h,8); cx.fill();
-  cx.fillStyle = '#001a33'; roundRect(x+6,y+8,w-12, h*0.28, 6); cx.fill();
-  cx.fillStyle = '#ffe94d'; cx.fillRect(x+6, y+h-8, 10, 6); cx.fillRect(x+w-16, y+h-8, 10, 6);
-  cx.strokeStyle = 'rgba(0,240,255,.35)'; cx.lineWidth = 2; roundRect(x,y,w,h,8); cx.stroke();
-  if(turbo.active){
-    // simple trail
-    cx.fillStyle = 'rgba(255,71,255,0.2)';
-    cx.fillRect(x+4, y+h, w-8, 30);
-  }
+  // grant initial shield
+  player.shield=true;
 }
-function drawCoin(cx_, cy_, r){
-  cx.fillStyle = '#2a1d00'; cx.beginPath(); cx.arc(cx_, cy_, r+4, 0, Math.PI*2); cx.fill();
-  cx.fillStyle = '#ffe94d'; cx.beginPath(); cx.arc(cx_, cy_, r, 0, Math.PI*2); cx.fill();
-  cx.fillStyle = '#fff6'; cx.fillRect(cx_-r*0.4, cy_-r*0.1, r*0.8, r*0.2);
-}
-function drawPU(x, y, r, kind){
-  // ring
-  cx.strokeStyle = kind==='shield' ? 'rgba(77,255,122,0.9)' : 'rgba(0,240,255,0.9)';
-  cx.lineWidth = 3; cx.beginPath(); cx.arc(x, y, r+6, 0, Math.PI*2); cx.stroke();
-  // icon
-  cx.fillStyle = '#000'; cx.beginPath(); cx.arc(x, y, r+2, 0, Math.PI*2); cx.fill();
-  cx.fillStyle = kind==='shield' ? '#4dff7a' : '#00f0ff';
-  if(kind==='shield'){
-    // tiny shield glyph
-    cx.beginPath();
-    cx.moveTo(x, y-r*0.8);
-    cx.lineTo(x+r*0.8, y-r*0.2);
-    cx.lineTo(x, y+r*0.9);
-    cx.lineTo(x-r*0.8, y-r*0.2);
-    cx.closePath(); cx.fill();
-  }else{
-    // hourglass-ish
-    cx.beginPath();
-    cx.moveTo(x-r*0.7, y-r*0.8); cx.lineTo(x+r*0.7, y-r*0.8);
-    cx.lineTo(x-r*0.7, y+r*0.8); cx.lineTo(x+r*0.7, y+r*0.8);
-    cx.closePath(); cx.fill();
-  }
-}
-
-/* util */
-function roundRect(x,y,w,h,r){ cx.beginPath();
-  cx.moveTo(x+r,y); cx.arcTo(x+w,y,x+w,y+h,r);
-  cx.arcTo(x+w,y+h,x,y+h,r); cx.arcTo(x,y+h,x,y,r);
-  cx.arcTo(x,y,x+w,y,r); cx.closePath(); }
-
-/* ====== Crash / Over ====== */
-function crash(){
-  if(over) return;
-  over = true; running = false; sfx.crash();
-  if(score > best){ best = score; localStorage.setItem(HS_KEY, best); }
-  stateEl.textContent = 'GAME OVER';
-  ovScore.textContent = score; ovBest.textContent = best;
-  overlay.style.display = 'grid';
-}
-
-/* ====== Start ====== */
-function start(){
-  reset();
-  requestAnimationFrame(loop);
-}
-start();
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) paused=true; });
+window.addEventListener('load', init);
+})();
 </script>
 </body>
 </html>
