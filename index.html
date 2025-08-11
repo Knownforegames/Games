@@ -4,53 +4,123 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>GameDock</title>
-<meta name="description" content="GameDock — pick a game and play right in your browser." />
+<meta name="description" content="GameDock — retro web arcade." />
+
+<!-- Pixel font -->
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<!-- Favicon: small neon pixel badge -->
 <link rel="icon" href="data:image/svg+xml;utf8,
-  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
-    <defs><linearGradient id='g' x1='0' x2='1'>
-      <stop stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/>
-    </linearGradient></defs>
-    <rect width='64' height='64' rx='14' fill='url(%23g)'/>
-    <circle cx='24' cy='26' r='4' fill='%230b1020'/>
-    <circle cx='40' cy='26' r='4' fill='%230b1020'/>
-    <rect x='18' y='38' width='28' height='6' rx='3' fill='%230b1020'/>
-  </svg>">
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'>
+<rect width='16' height='16' fill='%23000'/>
+<rect x='2' y='2' width='12' height='12' fill='%2300e5ff'/>
+<rect x='3' y='3' width='10' height='10' fill='%23000'/>
+<rect x='5' y='5' width='6' height='6' fill='%23ff47ff'/>
+</svg>">
+
 <style>
   :root{
-    --bg1:#0b1020; --bg2:#0e162b; --ink:#e6e7eb; --muted:#93a3be; --border:#ffffff22; --glass:rgba(255,255,255,.06);
-    --c1:#22d3ee; --c2:#a78bfa; --c3:#f472b6;
+    --bg1:#05060a; --bg2:#0b0e18;
+    --ink:#e6f7ff; --muted:#7fd0e0;
+    --neon1:#00f0ff; --neon2:#ff47ff; --neon3:#ffe94d; --neon4:#4dff7a;
+    --card:#090b14ee; --border:#00f0ff55;
   }
+
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; color:var(--ink); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    margin:0; color:var(--ink);
+    font-family:'Press Start 2P', system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    letter-spacing:.5px;
     background:
-      radial-gradient(900px 500px at 100% -10%, rgba(34,211,238,.12), transparent),
-      radial-gradient(800px 400px at -20% 20%, rgba(167,139,250,.12), transparent),
+      radial-gradient(1200px 700px at 20% -10%, #1a0f3a55 0%, transparent 60%),
+      radial-gradient(1100px 650px at 110% 10%, #003a4450 0%, transparent 60%),
       linear-gradient(180deg,var(--bg1),var(--bg2));
   }
-  .wrap{max-width:1100px;margin:0 auto;padding:22px 16px}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+
+  /* Subtle CRT scanlines + vignette */
+  body::before, body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  }
+  body::before{
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,.06) 0px,
+        rgba(255,255,255,.06) 1px,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0) 4px
+      );
+    mix-blend-mode: overlay;
+  }
+  body::after{
+    background: radial-gradient(1200px 700px at 50% -10%, rgba(0,0,0,0) 40%, rgba(0,0,0,.5) 100%);
+  }
+
+  .wrap{max-width:1100px;margin:0 auto;padding:22px 16px; position:relative; z-index:1}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
   .brand{display:flex;gap:12px;align-items:center}
-  .logo{width:34px;height:34px;border-radius:11px;background:conic-gradient(var(--c1),var(--c2),var(--c3),var(--c1));box-shadow:0 0 30px rgba(34,211,238,.25),0 0 30px rgba(167,139,250,.2)}
-  .title{font-weight:800;font-size:clamp(22px,4vw,30px);margin:0}
-  .muted{color:var(--muted)}
-  /* grid + cards */
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+  .logo{
+    width:34px;height:34px; image-rendering:pixelated;
+    background:
+      linear-gradient(#000,#000) padding-box,
+      conic-gradient(from 0deg,var(--neon1),var(--neon2),var(--neon3),var(--neon1)) border-box;
+    border:4px solid transparent; border-radius:6px; box-shadow:0 0 18px var(--neon1);
+  }
+  h1{margin:0;font-size:clamp(18px,3.6vw,26px);text-shadow:0 0 6px var(--neon1),0 0 12px var(--neon2)}
+  .muted{color:var(--muted); font-size:10px}
+
+  /* Grid + cards */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:10px}
   @media (max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:640px){.grid{grid-template-columns:1fr}}
-  a.card{position:relative;border:1px solid var(--border);background:var(--glass);border-radius:16px;overflow:hidden;transition:transform .12s ease, box-shadow .12s ease;display:block;color:inherit;text-decoration:none}
-  a.card:hover{transform:translateY(-3px); box-shadow:0 20px 48px rgba(0,0,0,.35), 0 0 70px rgba(34,211,238,.12)}
-  .thumb{aspect-ratio:16/9;width:100%;object-fit:cover;display:block}
-  .card-body{padding:12px}
-  .heading{display:flex;align-items:center;gap:10px;font-weight:800;margin:0 0 6px}
-  .tiny{width:22px;height:22px;border-radius:6px;box-shadow:0 0 14px rgba(34,211,238,.25)}
-  .desc{font-size:13px;color:var(--muted)}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
-  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:var(--glass);font-size:12px}
-  .btn{padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:var(--glass);color:#fff;font-weight:700;text-decoration:none}
-  .btn:hover{transform:translateY(-1px)}
-  footer{border-top:1px solid var(--border);text-align:center;color:var(--muted);padding:18px 0;margin-top:26px}
+
+  a.card{
+    display:block; color:inherit; text-decoration:none;
+    background:var(--card); border:2px solid var(--border); border-radius:14px; overflow:hidden;
+    box-shadow:0 0 0 2px #000 inset, 0 0 18px #000;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease, filter .12s ease;
+    position:relative;
+  }
+  a.card::after{
+    content:""; position:absolute; inset:0; pointer-events:none; border-radius:12px;
+    box-shadow:0 0 18px var(--neon1) inset;
+    opacity:.15; transition:opacity .12s ease;
+  }
+  a.card:hover{
+    transform:translateY(-3px) scale(1.01);
+    border-color:#fff8;
+    box-shadow:0 0 24px var(--neon1), 0 0 36px var(--neon2);
+    filter:saturate(1.2);
+  }
+  a.card:hover::after{opacity:.3}
+
+  .thumb{
+    aspect-ratio:16/9; width:100%; display:block; object-fit:cover; image-rendering:pixelated;
+    background:#000;
+  }
+  .card-body{padding:14px}
+  .heading{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+  .heading .tiny{
+    width:18px;height:18px; image-rendering:pixelated; border-radius:3px;
+    box-shadow:0 0 8px var(--neon2);
+  }
+  .desc{font-size:10px;color:var(--muted); line-height:1.6}
+  .row{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+  .pill{
+    font-size:10px; padding:6px 10px; border-radius:999px;
+    background:#000a; border:2px solid var(--neon1); color:var(--neon1);
+    box-shadow:0 0 10px #000 inset, 0 0 12px var(--neon1);
+  }
+  .btn{
+    font-size:10px; padding:8px 12px; border-radius:6px;
+    background:#000; color:#fff; border:2px solid var(--neon2);
+    text-shadow:0 0 6px var(--neon2);
+    box-shadow:0 0 10px #000 inset, 0 0 14px var(--neon2);
+  }
+
+  footer{border-top:2px dashed #1b2035; text-align:center; color:var(--muted); padding:18px 0; margin-top:24px; font-size:10px}
 </style>
 </head>
 <body>
@@ -58,59 +128,69 @@
     <header>
       <div class="brand">
         <span class="logo"></span>
-        <h1 class="title">GameDock</h1>
+        <h1>GameDock</h1>
       </div>
       <div class="muted">Pick a game below</div>
     </header>
 
     <section class="grid">
-      <!-- CLICK IT! -->
+      <!-- CLICK IT! (pixel-style orb) -->
       <a class="card" href="./click-it/">
         <img class="thumb" alt="Click it! cover"
-             src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><defs><radialGradient id='g' cx='30%' cy='30%'><stop offset='0' stop-color='%23ffffff'/><stop offset='0.06' stop-color='%23cffafe'/><stop offset='0.4' stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></radialGradient></defs><rect width='100%' height='100%' fill='%230f172a'/><circle cx='400' cy='230' r='140' fill='url(%23g)'/><text x='400' y='240' text-anchor='middle' fill='%230b1020' style='font:bold 34px system-ui'>CLICK</text></svg>">
+             src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 180' shape-rendering='crispEdges'><rect width='320' height='180' fill='%23000'/><g>
+  <rect x='110' y='40' width='100' height='100' fill='%2300f0ff'/><rect x='116' y='46' width='88' height='88' fill='%23000'/>
+  <rect x='122' y='52' width='76' height='76' fill='%23ff47ff'/><rect x='128' y='58' width='64' height='64' fill='%2300f0ff'/>
+  <rect x='144' y='82' width='32' height='16' fill='%23000'/>
+</g></svg>">
         <div class="card-body">
           <h3 class="heading">
-            <img class="tiny" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><defs><linearGradient id='lg' x1='0' x2='1'><stop stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></linearGradient></defs><rect width='24' height='24' rx='6' fill='url(%23lg)'/></svg>">
+            <img class="tiny" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%23000'/><rect x='2' y='2' width='12' height='12' fill='%23ff47ff'/></svg>">
             Click it!
           </h3>
-          <div class="desc">Fast incremental clicker. Tap the glowing orb, buy upgrades, chase big numbers.</div>
+          <div class="desc">Retro clicker. Mash the neon orb, buy upgrades, chase big numbers.</div>
           <div class="row"><span class="pill">Clicker</span><span class="btn">Play</span></div>
         </div>
       </a>
 
-      <!-- SNAKE -->
+      <!-- SNAKE (chunky pixels) -->
       <a class="card" href="./snake/">
         <img class="thumb" alt="Snake cover"
-             src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><rect width='100%' height='100%' fill='%230f172a'/><g transform='translate(260,130)'><rect x='0' y='0' width='60' height='60' rx='6' fill='%2322d3ee'/><rect x='64' y='0' width='60' height='60' rx='6' fill='%2322d3ee'/><rect x='128' y='0' width='60' height='60' rx='6' fill='%2322d3ee'/><rect x='192' y='0' width='60' height='60' rx='6' fill='%2322d3ee'/><rect x='256' y='0' width='60' height='60' rx='6' fill='%23a78bfa'/><circle cx='276' cy='18' r='6' fill='%230b1020'/><circle cx='292' cy='18' r='6' fill='%230b1020'/></g></svg>">
+             src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 180' shape-rendering='crispEdges'><rect width='320' height='180' fill='%23000'/><g>
+  <rect x='70' y='60' width='28' height='28' fill='%2300f0ff'/><rect x='100' y='60' width='28' height='28' fill='%2300f0ff'/><rect x='130' y='60' width='28' height='28' fill='%2300f0ff'/><rect x='160' y='60' width='28' height='28' fill='%2300f0ff'/>
+  <rect x='190' y='60' width='28' height='28' fill='%23ff47ff'/><rect x='196' y='64' width='6' height='6' fill='%23000'/><rect x='206' y='64' width='6' height='6' fill='%23000'/>
+</g></svg>">
         <div class="card-body">
           <h3 class="heading">
-            <img class="tiny" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><defs><linearGradient id='lg2' x1='0' x2='1'><stop stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></linearGradient></defs><rect width='24' height='24' rx='6' fill='url(%23lg2)'/></svg>">
+            <img class="tiny" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%23000'/><rect x='2' y='2' width='12' height='12' fill='%2300f0ff'/></svg>">
             Snake
           </h3>
-          <div class="desc">Classic snake with swipe controls, pause, and saved high score.</div>
+          <div class="desc">Old-school snake with swipe/keys, pause, and local high score.</div>
           <div class="row"><span class="pill">Arcade</span><span class="btn">Play</span></div>
         </div>
       </a>
 
-      <!-- STACK TOWER -->
+      <!-- STACK TOWER (pixel stack) -->
       <a class="card" href="./stack-tower/">
         <img class="thumb" alt="Stack Tower cover"
-             src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><rect width='100%' height='100%' fill='%230f172a'/><g transform='translate(340,110)'><rect width='120' height='22' rx='6' fill='%2322d3ee'/><rect y='26' width='100' height='22' rx='6' fill='%23a78bfa'/><rect y='52' width='80' height='22' rx='6' fill='%23f472b6'/><rect y='78' width='60' height='22' rx='6' fill='%2334d399'/><rect y='104' width='40' height='22' rx='6' fill='%23f59e0b'/></g></svg>">
+             src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 180' shape-rendering='crispEdges'><rect width='320' height='180' fill='%23000'/><g transform='translate(150,30)'>
+  <rect width='60' height='10' fill='%2300f0ff'/><rect y='14' width='50' height='10' fill='%23ff47ff'/><rect y='28' width='40' height='10' fill='%23ffe94d'/><rect y='42' width='30' height='10' fill='%234dff7a'/><rect y='56' width='20' height='10' fill='%2300f0ff'/>
+</g></svg>">
         <div class="card-body">
           <h3 class="heading">
-            <img class="tiny" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><defs><linearGradient id='lg3' x1='0' x2='1'><stop stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></linearGradient></defs><rect width='24' height='24' rx='6' fill='url(%23lg3)'/></svg>">
+            <img class="tiny" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%23000'/><rect x='2' y='2' width='12' height='12' fill='%23ffe94d'/></svg>">
             Stack Tower
           </h3>
-          <div class="desc">Drop moving blocks, slice overhangs, and build the tallest neon tower.</div>
+          <div class="desc">Drop chunky blocks, slice overhangs, build the tallest neon tower.</div>
           <div class="row"><span class="pill">Arcade</span><span class="btn">Play</span></div>
         </div>
       </a>
     </section>
 
     <footer>
-      Built for GitHub Pages • Thumbnails are inline SVGs (no extra files)
+      Built for GitHub Pages • CRT scanlines & pixel font for retro vibes • Thumbnails are inline SVGs
     </footer>
   </main>
 </body>
 </html>
+
 
