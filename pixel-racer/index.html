@@ -1,494 +1,173 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pixel Racer — Retro + Power-Ups</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg1:#05060a; --bg2:#0b0e18; --ink:#e6f7ff; --muted:#7fd0e0; --border:#00f0ff88;
-    --neon1:#00f0ff; --neon2:#ff47ff; --neon3:#ffe94d; --neon4:#4dff7a; --card:#0a0d17f0;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;color:var(--ink); letter-spacing:.4px;
-    font-family:'Press Start 2P', system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    background:
-      radial-gradient(1200px 700px at 20% -10%, #1a0f3a55 0%, transparent 60%),
-      radial-gradient(1100px 650px at 110% 10%, #003a4450 0%, transparent 60%),
-      linear-gradient(180deg,var(--bg1),var(--bg2));
-  }
-  /* CRT scanlines + vignette */
-  body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0}
-  body::before{
-    background:repeating-linear-gradient(to bottom,rgba(255,255,255,.06) 0,rgba(255,255,255,.06) 1px,transparent 2px,transparent 4px);
-    mix-blend-mode:overlay;
-  }
-  body::after{background:radial-gradient(1200px 700px at 50% -10%,transparent 40%,rgba(0,0,0,.55) 100%)}
-
-  .wrap{max-width:980px;margin:0 auto;padding:16px;position:relative;z-index:1}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-  h1{margin:0;font-size:clamp(16px,3.6vw,24px);text-shadow:0 0 6px var(--neon1),0 0 12px var(--neon2)}
-  .btn{border:2px solid var(--neon2);background:#000;color:#fff;border-radius:6px;padding:8px 12px;cursor:pointer;box-shadow:0 0 12px var(--neon2)}
-  .panel{border:2px solid var(--border);background:var(--card);border-radius:14px;padding:12px}
-
-  .grid{display:grid;grid-template-columns:3fr 1fr;gap:12px}
-  @media (max-width:900px){.grid{grid-template-columns:1fr}}
-  canvas{display:block;width:100%;height:auto;background:#000;border:2px solid var(--border);border-radius:10px;image-rendering:pixelated}
-
-  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
-  .stat{border:2px solid var(--border);background:#0008;border-radius:10px;padding:10px;text-align:center}
-  .label{font-size:12px;color:var(--muted)} .value{font-size:18px}
-
-  .section-title{margin:14px 0 8px}
-
-  /* Turbo meter */
-  .meter{height:12px;background:#000;border:2px solid var(--neon1);border-radius:8px;overflow:hidden}
-  .meter>div{height:100%;width:0%;background:linear-gradient(90deg,var(--neon3),var(--neon2));box-shadow:0 0 12px var(--neon2)}
-
-  /* Active power-ups list */
-  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .badge{font-size:10px;padding:6px 8px;border-radius:6px;background:#000;border:2px solid var(--neon4);box-shadow:0 0 10px var(--neon4);color:#eafff3}
-
-  /* Mobile lane + turbo buttons */
-  .controls{display:none;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap}
-  .cbtn{width:140px;height:60px;border-radius:8px;background:#000;border:2px solid var(--neon1);
-        color:#eaf8ff; box-shadow:0 0 10px var(--neon1);}
-  .turboBtn{width:300px}
-
-  @media (pointer:none), (pointer:coarse){ .controls{display:flex} }
-
-  .hint{margin-top:8px;color:var(--muted);font-size:10px}
-
-  /* Pause / Game over overlay */
-  .overlay{position:absolute;inset:12px;display:none;place-items:center;background:rgba(0,0,0,.45);border-radius:12px}
-  .dialog{border:2px solid var(--border);background:#0f172acc;border-radius:10px;padding:16px;text-align:center}
-  .dialog h2{margin:0 0 8px}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pixel Racer (Retro)</title>
+  <style>
+    :root{
+      --c0:#0ff; --c1:#0af; --bg:#0a0f14; --panel:#0d1a22; --line:#0ff8;
+      --txt:#e7faff; --accent:#ff8bf3; --glow:0 0 16px #0ff6,0 0 32px #0ff3;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--txt); font-family: 'Press Start 2P', system-ui, sans-serif;
+      background: radial-gradient(1200px 700px at 25% 10%, #112a55, #0a0f14 60%),
+                  radial-gradient(1200px 600px at 60% 105%, #083045, #0a0f14 60%),
+                  linear-gradient(0deg, #0b0f16, #0a0f14);
+      letter-spacing:.4px;
+    }
+    .wrap{max-width:980px;margin:24px auto;padding:12px;}
+    .hud{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+    h1{margin:0;font-size:28px;text-shadow: var(--glow)}
+    .btn{
+      padding:10px 14px;border:2px solid var(--line);border-radius:12px;background:#151b22;
+      color:#fff; cursor:pointer; box-shadow: var(--glow); font-size:12px;
+    }
+    .layout{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+    .panel{border:2px solid var(--line);border-radius:14px;padding:10px;background:#0b141a}
+    canvas{display:block;width:100%;height:100%;border-radius:10px}
+    .gamebox{height:70vh;min-height:480px;display:flex}
+    .gamebox canvas{flex:1}
+    .stat{display:flex;justify-content:space-between;padding:8px;border:1px solid var(--line);border-radius:8px;margin-top:8px}
+    .foot{font-size:12px;opacity:.8;margin-top:6px}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>🚗 Pixel Racer (Retro)</h1>
-    <div>
-      <a class="btn" href="../">← Back</a>
-      <button id="pauseBtn" class="btn">Pause</button>
-      <button id="resetBtn" class="btn">Reset</button>
+  <div class="wrap">
+    <div class="hud">
+      <h1>👾 Pixel Racer (Retro)</h1>
+      <button class="btn" id="btnBack">← Back</button>
+      <button class="btn" id="btnPause">Pause</button>
+      <button class="btn" id="btnReset">Reset</button>
     </div>
-  </header>
 
-  <div class="grid">
-    <section class="panel" style="position:relative">
-      <canvas id="cv" width="480" height="720"></canvas>
-
-      <div id="overlay" class="overlay">
-        <div class="dialog">
-          <h2 id="state">PAUSED</h2>
-          <div class="label" style="margin-bottom:12px">
-            Score <b id="ovScore">0</b> • Best <b id="ovBest">0</b>
-          </div>
-          <button id="resumeBtn" class="btn">Resume</button>
-        </div>
+    <div class="layout">
+      <div class="panel gamebox">
+        <canvas id="game" width="480" height="720" aria-label="Pixel Racer canvas"></canvas>
       </div>
-
-      <div class="controls">
-        <button class="cbtn" data-x="-1">◀ LEFT</button>
-        <button class="cbtn" data-x="+1">RIGHT ▶</button>
-        <button id="turboTouch" class="cbtn turboBtn">💥 TURBO</button>
+      <div class="panel">
+        <h3 style="margin:6px 0 8px">Stats</h3>
+        <div class="stat"><span>Score</span><strong id="score">0</strong></div>
+        <div class="stat"><span>Best</span><strong id="best">0</strong></div>
+        <div class="stat"><span>Coins</span><strong id="coins">0</strong></div>
+        <p class="foot">Keys: A/D lanes • Hold SHIFT for turbo • P pause • R reset</p>
       </div>
-      <div class="hint">Keys: ←/→ (A/D) lanes • Hold **SHIFT** for TURBO • P pause • R restart • Mobile: use big buttons</div>
-    </section>
-
-    <aside class="panel">
-      <h3 class="section-title">Stats</h3>
-      <div class="stats">
-        <div class="stat"><div class="label">Score</div><div id="score" class="value">0</div></div>
-        <div class="stat"><div class="label">Best</div><div id="best" class="value">0</div></div>
-      </div>
-
-      <h3 class="section-title">Turbo</h3>
-      <div class="meter" aria-label="Turbo meter"><div id="turboBar"></div></div>
-      <div class="label" id="turboLabel" style="margin-top:6px">Charge by driving & coins. Hold SHIFT to boost.</div>
-
-      <h3 class="section-title">Power-ups</h3>
-      <div class="label">Pickups spawn on lanes:</div>
-      <ul class="label" style="margin:6px 0 8px 18px">
-        <li>🛡 Shield (one crash forgiveness)</li>
-        <li>⏳ Slow-Mo (traffic slowed)</li>
-      </ul>
-      <div class="badges" id="badges"></div>
-
-      <div class="stat" style="margin-top:12px"><div class="label">Coins</div><div id="coins" class="value">0</div></div>
-    </aside>
+    </div>
   </div>
-</div>
 
-<script>
-/* ====== Setup ====== */
-const cv = document.getElementById('cv');
-const cx = cv.getContext('2d');
-const W = cv.width, H = cv.height;
-
-const scoreEl = document.getElementById('score');
-const bestEl = document.getElementById('best');
-const coinsEl = document.getElementById('coins');
-
-const overlay = document.getElementById('overlay');
-const stateEl = document.getElementById('state');
-const ovScore = document.getElementById('ovScore');
-const ovBest = document.getElementById('ovBest');
-
-const pauseBtn = document.getElementById('pauseBtn');
-const resetBtn = document.getElementById('resetBtn');
-const resumeBtn = document.getElementById('resumeBtn');
-
-const turboBar = document.getElementById('turboBar');
-const turboLabel = document.getElementById('turboLabel');
-const badgesEl = document.getElementById('badges');
-const turboTouch = document.getElementById('turboTouch');
-
-const HS_KEY = 'pixelracer.best.v2';
-let best = +localStorage.getItem(HS_KEY) || 0; bestEl.textContent = best;
-
-/* ====== Audio (simple beeps) ====== */
-const AC = window.AudioContext || window.webkitAudioContext;
-const actx = new AC();
-function blip(freq=800,dur=0.06, type='square', vol=0.1){
-  const o = actx.createOscillator(), g = actx.createGain();
-  o.type=type; o.frequency.value=freq;
-  g.gain.setValueAtTime(0, actx.currentTime);
-  g.gain.linearRampToValueAtTime(vol, actx.currentTime+0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
-  o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+dur);
-}
-const sfx = {
-  coin: ()=> blip(1200,0.07,'triangle',0.12),
-  lane: ()=> blip(600,0.05,'square',0.08),
-  crash:()=> { blip(200,0.18,'sawtooth',0.15); setTimeout(()=>blip(120,0.2,'sawtooth',0.13),80); },
-  pu:   ()=> blip(900,0.1,'triangle',0.14),
-  turboOn: ()=> { blip(700,0.06,'square',0.14); setTimeout(()=>blip(1000,0.06,'square',0.14),70); },
-  turboOff:()=> blip(400,0.08,'sine',0.12),
-  shieldBreak:()=> { blip(500,0.06,'triangle',0.12); setTimeout(()=>blip(350,0.09,'sawtooth',0.13),50); }
-}
-
-/* ====== Game State ====== */
-const lanes = 3;
-const laneW = W/lanes;
-
-let player;           // {lane,y,w,h,color}
-let objs = [];        // cars / coins / powerups
-let roadY = 0;        // scrolling background
-let baseSpeed = 4;    // base world speed
-let score = 0, coins = 0;
-let running = true, paused = false, over = false;
-
-// Turbo
-const turbo = {charge:0, max:100, active:false, drain:40 /* per second */, gainCoin:12, gainTime:0.06}; // charge/time gains
-// Power-ups state
-let shield = 0;               // 0/1 (one-hit protect)
-let slowmo = 0;               // ms remaining
-
-function reset(){
-  objs.length = 0;
-  player = { lane:1, y:H-120, w:laneW*0.55, h:70, color:'#e6f7ff' };
-  baseSpeed = 4; score = 0; coins = 0; running=true; paused=false; over=false;
-  roadY = 0; lastSpawn = 0; spawnBase = 900;
-  turbo.charge = 0; turbo.active = false;
-  shield = 0; slowmo = 0;
-  updateHUD();
-  hideOverlay();
-}
-
-/* ====== Spawning ====== */
-let lastSpawn = 0;
-let spawnBase = 900; // smaller = more spawns
-
-function rand(min,max){ return Math.random()*(max-min)+min; }
-function pick(a){ return a[(Math.random()*a.length)|0]; }
-
-function spawn(){
-  const lane = (Math.random()*lanes)|0;
-  const x = lane*laneW + laneW*0.5;
-  const roll = Math.random();
-  if(roll < 0.60){ // enemy car
-    const carW = laneW*0.55, carH = rand(70,100);
-    objs.push({type:'car',lane,x,y:-carH, w:carW, h:carH, color: pick(['#00f0ff','#ff47ff','#ffe94d','#4dff7a','#22a3ff'])});
-  }else if(roll < 0.82){ // coin
-    const r = laneW*0.22;
-    objs.push({type:'coin',lane,x,y:-r*2, r, color:'#ffe94d'});
-  }else{ // power-up (shield / slowmo)
-    const kind = Math.random() < 0.5 ? 'shield' : 'slow';
-    const r = laneW*0.22;
-    objs.push({type:'pu',kind,lane,x,y:-r*2, r});
-  }
-}
-
-/* ====== Input ====== */
-function moveLane(d){
-  if(!running || paused) return;
-  const nl = Math.max(0, Math.min(lanes-1, player.lane + d));
-  if(nl !== player.lane){ player.lane = nl; sfx.lane(); }
-}
-function setTurbo(active){
-  if(active && !turbo.active && turbo.charge>0){
-    turbo.active = true; sfx.turboOn();
-  }else if(!active && turbo.active){
-    turbo.active = false; sfx.turboOff();
-  }
-}
-window.addEventListener('keydown', e=>{
-  const k = e.key.toLowerCase();
-  if(k==='arrowleft' || k==='a') moveLane(-1);
-  if(k==='arrowright'|| k==='d') moveLane(+1);
-  if(k==='p') togglePause();
-  if(k==='r') reset();
-  if(e.key==='Shift') setTurbo(true);
-});
-window.addEventListener('keyup', e=>{
-  if(e.key==='Shift') setTurbo(false);
-});
-
-document.querySelectorAll('.cbtn').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    const dir = b.dataset.x === '+1' ? 1 : -1;
-    moveLane(dir);
+  <script>
+  // ===== Safe-boot error overlay (shows errors on-screen) =====
+  window.onerror = (m,s,l,c,e)=>{
+    const d=document.createElement('div');
+    d.style.cssText='position:fixed;top:8px;left:8px;background:#300;color:#fff;padding:8px;z-index:9999;border:1px solid #f66;font:12px monospace';
+    d.textContent='JS Error: '+m+' @'+s+':'+l; document.body.appendChild(d);
+  };
+  window.addEventListener('unhandledrejection',ev=>{
+    const d=document.createElement('div');
+    d.style.cssText='position:fixed;top:48px;left:8px;background:#303;color:#fff;padding:8px;z-index:9999;border:1px solid #6f6;font:12px monospace';
+    d.textContent='Promise Rejection: '+ev.reason; document.body.appendChild(d);
   });
-});
-turboTouch.addEventListener('touchstart', e=>{ e.preventDefault(); setTurbo(true); }, {passive:false});
-turboTouch.addEventListener('touchend',   ()=> setTurbo(false));
 
-pauseBtn.onclick = ()=> togglePause();
-resetBtn.onclick = ()=> reset();
-resumeBtn.onclick = ()=> togglePause();
+  // ===== Minimal working game loop =====
+  (function(){
+    const cvs = document.getElementById('game');
+    const ctx = cvs.getContext('2d');
 
-function togglePause(){
-  if(over){ reset(); return; }
-  paused = !paused;
-  stateEl.textContent = paused ? 'PAUSED' : 'RUNNING';
-  overlay.style.display = paused ? 'grid' : 'none';
-}
+    // Fit canvas to container while preserving internal resolution
+    function fit(){
+      const box = cvs.parentElement.getBoundingClientRect();
+      // keep 2:3 ratio
+      const targetW = Math.min(box.width, 520);
+      const targetH = targetW*1.5;
+      cvs.style.width = targetW+'px';
+      cvs.style.height = targetH+'px';
+    }
+    addEventListener('resize', fit); fit();
 
-/* ====== HUD ====== */
-function updateHUD(){
-  scoreEl.textContent = score;
-  coinsEl.textContent = coins;
-  bestEl.textContent = best;
-  turboBar.style.width = (100*Math.min(1, turbo.charge/turbo.max)).toFixed(1) + '%';
-  // badges
-  badgesEl.innerHTML = '';
-  if(shield>0){ addBadge('🛡 Shield'); }
-  if(slowmo>0){ addBadge('⏳ Slow-Mo'); }
-  function addBadge(txt){
-    const b = document.createElement('div');
-    b.className='badge'; b.textContent = txt;
-    badgesEl.appendChild(b);
-  }
-}
+    const lanes = [cvs.width*0.25, cvs.width*0.5, cvs.width*0.75];
+    let player = {x: lanes[1], y: cvs.height-120, lane:1, w:36, h:60, vx:0};
+    let t=0, running=true, score=0, best=+localStorage.pixelRacerBest||0;
+    let speed=4, dotted=0, obstacles=[];
+    const keys = new Set();
 
-/* ====== Loop ====== */
-let last = 0;
-function loop(t){
-  requestAnimationFrame(loop);
-  if(!running) return;
-  if(!last) last = t;
-  const dt = Math.min(32, t-last); last = t;
-  if(paused) { draw(); return; }
+    function reset(){
+      obstacles.length=0; score=0; speed=4; player.lane=1; player.x=lanes[1]; player.vx=0; t=0; running=true;
+    }
 
-  // difficulty scale
-  if(score && score % 20 === 0) baseSpeed = Math.min(14, 4 + Math.floor(score/20));
+    function spawn(){
+      const lane = Math.floor(Math.random()*3);
+      obstacles.push({x: lanes[lane], y: -70, w:36, h:60, lane});
+    }
 
-  // slow-mo factor
-  if(slowmo>0){ slowmo = Math.max(0, slowmo - dt); }
-  const slowFactor = slowmo>0 ? 0.45 : 1;
+    function drawCar(x,y,w,h,color){
+      ctx.fillStyle=color;
+      ctx.fillRect(x-w/2, y-h/2, w, h);
+      ctx.fillStyle="#0006";
+      ctx.fillRect(x-w/2+6, y-h/2+8, w-12, h-16);
+    }
 
-  // turbo drain/charge
-  if(turbo.active){
-    turbo.charge = Math.max(0, turbo.charge - turbo.drain*(dt/1000));
-    if(turbo.charge<=0) setTurbo(false);
-  }else{
-    turbo.charge = Math.min(turbo.max, turbo.charge + turbo.gainTime*dt); // passive charge over time
-  }
+    function loop(){
+      if(!running){ requestAnimationFrame(loop); return; }
+      t+=1;
+      // background
+      ctx.fillStyle='#000'; ctx.fillRect(0,0,cvs.width,cvs.height);
+      // road
+      ctx.fillStyle='#111c26'; ctx.fillRect(40,0,cvs.width-80,cvs.height);
+      // lane markers
+      ctx.fillStyle='#9ff';
+      ctx.setLineDash([20,20]); ctx.lineDashOffset = dotted; dotted-=6;
+      ctx.lineWidth=4; ctx.beginPath();
+      ctx.moveTo(cvs.width/2,0); ctx.lineTo(cvs.width/2,cvs.height);
+      ctx.moveTo( (cvs.width/2+40),0); ctx.lineTo( (cvs.width/2+40),cvs.height);
+      ctx.moveTo( (cvs.width/2-40),0); ctx.lineTo( (cvs.width/2-40),cvs.height);
+      ctx.stroke();
 
-  // world speed
-  const speed = baseSpeed * (turbo.active ? 1.85 : 1) * slowFactor;
-  const s = speed * (dt/16);
-  roadY += s;
+      // input
+      if(keys.has('KeyA')||keys.has('ArrowLeft')) player.lane=Math.max(0, player.lane-(t%6===0));
+      if(keys.has('KeyD')||keys.has('ArrowRight')) player.lane=Math.min(2, player.lane+(t%6===0));
+      const targetX = lanes[player.lane];
+      player.x += (targetX - player.x)*0.2;
 
-  // spawn logic
-  lastSpawn += dt;
-  if(lastSpawn >= spawnBase){
-    spawn();
-    lastSpawn = 0;
-    // quicker spawns as baseSpeed grows
-    spawnBase = Math.max(260, 900 - baseSpeed*60);
-  }
+      // obstacles
+      if(t%55===0) spawn();
+      for(const o of obstacles){ o.y += speed + (score/500); }
+      while(obstacles.length && obstacles[0].y>cvs.height+80){ obstacles.shift(); score+=10; }
 
-  // move objects
-  for(let i=objs.length-1;i>=0;i--){
-    const o = objs[i];
-    o.y += s*1.1;
-
-    // collisions
-    if(o.type==='car'){
-      const px = player.lane*laneW + laneW*0.22;
-      if( AABB(px, player.y, player.w, player.h, o.x - o.w/2, o.y, o.w, o.h) ){
-        if(shield>0){
-          shield = 0; sfx.shieldBreak();
-          objs.splice(i,1); // smash the car
-        }else{
-          crash(); break;
+      // collisions
+      for(const o of obstacles){
+        if(Math.abs(o.x-player.x)<(o.w+player.w)/2 && Math.abs(o.y-player.y)<(o.h+player.h)/2){
+          running=false;
+          best=Math.max(best,score); localStorage.pixelRacerBest=best;
         }
       }
-    }else if(o.type==='coin'){
-      const px = player.lane*laneW + laneW*0.5;
-      const dx=px - o.x, dy = (player.y+player.h/2) - (o.y+o.r);
-      if(Math.hypot(dx,dy) < o.r + Math.min(player.w,player.h)/3){
-        coins += 1; score += 5; sfx.coin(); objs.splice(i,1);
-        turbo.charge = Math.min(turbo.max, turbo.charge + turbo.gainCoin); // coin supercharges turbo
-      }
-    }else if(o.type==='pu'){
-      const px = player.lane*laneW + laneW*0.5;
-      const dx=px - o.x, dy = (player.y+player.h/2) - (o.y+o.r);
-      if(Math.hypot(dx,dy) < o.r + Math.min(player.w,player.h)/3){
-        sfx.pu();
-        if(o.kind==='shield') shield = 1;
-        else if(o.kind==='slow') slowmo = 4000; // 4s slow-mo
-        objs.splice(i,1);
-      }
+
+      // draw obstacles & player
+      for(const o of obstacles) drawCar(o.x,o.y,o.w,o.h,'#ffcf5a');
+      drawCar(player.x, player.y, player.w, player.h, running?'#66e6ff':'#ff6ea8');
+
+      // UI
+      document.getElementById('score').textContent = score;
+      document.getElementById('best').textContent = best;
+
+      requestAnimationFrame(loop);
     }
 
-    // remove off-screen; scoring
-    if(o.y > H + 40){
-      if(o.type==='car') score += 1; // passing traffic scores
-      objs.splice(i,1);
-    }
-  }
+    // controls
+    addEventListener('keydown',e=>{
+      if(e.code==='KeyP'){running=!running; return;}
+      if(e.code==='KeyR'){reset(); return;}
+      keys.add(e.code);
+    });
+    addEventListener('keyup',e=>keys.delete(e.code));
+    document.getElementById('btnPause').onclick=()=>running=!running;
+    document.getElementById('btnReset').onclick=reset;
+    document.getElementById('btnBack').onclick=()=>history.back();
 
-  draw(); updateHUD();
-}
-
-function AABB(ax,ay,aw,ah,bx,by,bw,bh){
-  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
-}
-
-/* ====== Draw ====== */
-function draw(){
-  // road bg (turbo glow)
-  const g = cx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, turbo.active ? '#0a1e3f' : '#09122a');
-  g.addColorStop(1, '#050914');
-  cx.fillStyle = g; cx.fillRect(0,0,W,H);
-
-  // lane lines (dash scroll)
-  cx.strokeStyle = turbo.active ? 'rgba(255,71,255,0.35)' : 'rgba(0,240,255,0.25)';
-  cx.lineWidth = 2;
-  for(let i=1;i<lanes;i++){
-    cx.setLineDash([18,18]);
-    cx.lineDashOffset = -(roadY%36);
-    cx.beginPath(); cx.moveTo(i*laneW,0); cx.lineTo(i*laneW,H); cx.stroke();
-  }
-  cx.setLineDash([]);
-
-  // objects
-  objs.forEach(o=>{
-    if(o.type==='car'){
-      drawCar(o.x - o.w/2, o.y, o.w, o.h, o.color);
-    }else if(o.type==='coin'){
-      drawCoin(o.x, o.y, o.r);
-    }else if(o.type==='pu'){
-      drawPU(o.x, o.y, o.r, o.kind);
-    }
-  });
-
-  // player
-  const px = player.lane*laneW + laneW*0.22;
-  drawCar(px, player.y, player.w, player.h, player.color);
-  if(shield>0){ // shield aura
-    cx.strokeStyle = 'rgba(77,255,122,0.8)';
-    cx.lineWidth = 3;
-    roundRect(px-6, player.y-6, player.w+12, player.h+12, 12);
-    cx.stroke();
-  }
-
-  // score readout
-  cx.fillStyle = '#e6f7ff'; cx.font = '14px "Press Start 2P"';
-  cx.fillText('SCORE '+score, 12, 24);
-  cx.fillText('BEST '+best, 12, 46);
-  cx.fillText('SPD '+(turbo.active?'MAX':Math.round(baseSpeed)), 12, 68);
-  if(turbo.active){
-    cx.fillStyle = '#ff47ff';
-    cx.fillText('TURBO!', W-130, 24);
-  }
-}
-
-function drawCar(x,y,w,h,color){
-  const lg = cx.createLinearGradient(x,y,x+w,y+h);
-  lg.addColorStop(0,color);
-  lg.addColorStop(1,'#ffffff22');
-  cx.fillStyle = lg; roundRect(x,y,w,h,8); cx.fill();
-  cx.fillStyle = '#001a33'; roundRect(x+6,y+8,w-12, h*0.28, 6); cx.fill();
-  cx.fillStyle = '#ffe94d'; cx.fillRect(x+6, y+h-8, 10, 6); cx.fillRect(x+w-16, y+h-8, 10, 6);
-  cx.strokeStyle = 'rgba(0,240,255,.35)'; cx.lineWidth = 2; roundRect(x,y,w,h,8); cx.stroke();
-  if(turbo.active){
-    // simple trail
-    cx.fillStyle = 'rgba(255,71,255,0.2)';
-    cx.fillRect(x+4, y+h, w-8, 30);
-  }
-}
-function drawCoin(cx_, cy_, r){
-  cx.fillStyle = '#2a1d00'; cx.beginPath(); cx.arc(cx_, cy_, r+4, 0, Math.PI*2); cx.fill();
-  cx.fillStyle = '#ffe94d'; cx.beginPath(); cx.arc(cx_, cy_, r, 0, Math.PI*2); cx.fill();
-  cx.fillStyle = '#fff6'; cx.fillRect(cx_-r*0.4, cy_-r*0.1, r*0.8, r*0.2);
-}
-function drawPU(x, y, r, kind){
-  // ring
-  cx.strokeStyle = kind==='shield' ? 'rgba(77,255,122,0.9)' : 'rgba(0,240,255,0.9)';
-  cx.lineWidth = 3; cx.beginPath(); cx.arc(x, y, r+6, 0, Math.PI*2); cx.stroke();
-  // icon
-  cx.fillStyle = '#000'; cx.beginPath(); cx.arc(x, y, r+2, 0, Math.PI*2); cx.fill();
-  cx.fillStyle = kind==='shield' ? '#4dff7a' : '#00f0ff';
-  if(kind==='shield'){
-    // tiny shield glyph
-    cx.beginPath();
-    cx.moveTo(x, y-r*0.8);
-    cx.lineTo(x+r*0.8, y-r*0.2);
-    cx.lineTo(x, y+r*0.9);
-    cx.lineTo(x-r*0.8, y-r*0.2);
-    cx.closePath(); cx.fill();
-  }else{
-    // hourglass-ish
-    cx.beginPath();
-    cx.moveTo(x-r*0.7, y-r*0.8); cx.lineTo(x+r*0.7, y-r*0.8);
-    cx.lineTo(x-r*0.7, y+r*0.8); cx.lineTo(x+r*0.7, y+r*0.8);
-    cx.closePath(); cx.fill();
-  }
-}
-
-/* util */
-function roundRect(x,y,w,h,r){ cx.beginPath();
-  cx.moveTo(x+r,y); cx.arcTo(x+w,y,x+w,y+h,r);
-  cx.arcTo(x+w,y+h,x,y+h,r); cx.arcTo(x,y+h,x,y,r);
-  cx.arcTo(x,y,x+w,y,r); cx.closePath(); }
-
-/* ====== Crash / Over ====== */
-function crash(){
-  if(over) return;
-  over = true; running = false; sfx.crash();
-  if(score > best){ best = score; localStorage.setItem(HS_KEY, best); }
-  stateEl.textContent = 'GAME OVER';
-  ovScore.textContent = score; ovBest.textContent = best;
-  overlay.style.display = 'grid';
-}
-
-/* ====== Start ====== */
-function start(){
-  reset();
-  requestAnimationFrame(loop);
-}
-start();
-</script>
+    // start!
+    reset(); requestAnimationFrame(loop);
+  })();
+  </script>
 </body>
 </html>
-
