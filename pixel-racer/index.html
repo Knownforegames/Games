@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pixel Racer — Retro</title>
+<title>Pixel Racer — Retro + Power-Ups</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -42,9 +42,21 @@
   .stat{border:2px solid var(--border);background:#0008;border-radius:10px;padding:10px;text-align:center}
   .label{font-size:12px;color:var(--muted)} .value{font-size:18px}
 
-  .controls{display:none;gap:10px;justify-content:center;margin-top:10px}
+  .section-title{margin:14px 0 8px}
+
+  /* Turbo meter */
+  .meter{height:12px;background:#000;border:2px solid var(--neon1);border-radius:8px;overflow:hidden}
+  .meter>div{height:100%;width:0%;background:linear-gradient(90deg,var(--neon3),var(--neon2));box-shadow:0 0 12px var(--neon2)}
+
+  /* Active power-ups list */
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .badge{font-size:10px;padding:6px 8px;border-radius:6px;background:#000;border:2px solid var(--neon4);box-shadow:0 0 10px var(--neon4);color:#eafff3}
+
+  /* Mobile lane + turbo buttons */
+  .controls{display:none;gap:10px;justify-content:center;margin-top:10px;flex-wrap:wrap}
   .cbtn{width:140px;height:60px;border-radius:8px;background:#000;border:2px solid var(--neon1);
         color:#eaf8ff; box-shadow:0 0 10px var(--neon1);}
+  .turboBtn{width:300px}
 
   @media (pointer:none), (pointer:coarse){ .controls{display:flex} }
 
@@ -84,23 +96,31 @@
       <div class="controls">
         <button class="cbtn" data-x="-1">◀ LEFT</button>
         <button class="cbtn" data-x="+1">RIGHT ▶</button>
+        <button id="turboTouch" class="cbtn turboBtn">💥 TURBO</button>
       </div>
-      <div class="hint">Keys: ←/→ or A/D to change lanes • P pause • R restart • Mobile: big buttons</div>
+      <div class="hint">Keys: ←/→ (A/D) lanes • Hold **SHIFT** for TURBO • P pause • R restart • Mobile: use big buttons</div>
     </section>
 
     <aside class="panel">
-      <h3 style="margin:6px 0 10px">Stats</h3>
+      <h3 class="section-title">Stats</h3>
       <div class="stats">
         <div class="stat"><div class="label">Score</div><div id="score" class="value">0</div></div>
         <div class="stat"><div class="label">Best</div><div id="best" class="value">0</div></div>
       </div>
 
-      <h3 style="margin:14px 0 10px">Upgrades (auto)</h3>
-      <p class="label" style="line-height:1.7">
-        Speed rises every 20 pts.<br>
-        Coins +5. Miss traffic to survive!
-      </p>
-      <div class="stat" style="margin-top:10px"><div class="label">Coins</div><div id="coins" class="value">0</div></div>
+      <h3 class="section-title">Turbo</h3>
+      <div class="meter" aria-label="Turbo meter"><div id="turboBar"></div></div>
+      <div class="label" id="turboLabel" style="margin-top:6px">Charge by driving & coins. Hold SHIFT to boost.</div>
+
+      <h3 class="section-title">Power-ups</h3>
+      <div class="label">Pickups spawn on lanes:</div>
+      <ul class="label" style="margin:6px 0 8px 18px">
+        <li>🛡 Shield (one crash forgiveness)</li>
+        <li>⏳ Slow-Mo (traffic slowed)</li>
+      </ul>
+      <div class="badges" id="badges"></div>
+
+      <div class="stat" style="margin-top:12px"><div class="label">Coins</div><div id="coins" class="value">0</div></div>
     </aside>
   </div>
 </div>
@@ -124,7 +144,12 @@ const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
 const resumeBtn = document.getElementById('resumeBtn');
 
-const HS_KEY = 'pixelracer.best.v1';
+const turboBar = document.getElementById('turboBar');
+const turboLabel = document.getElementById('turboLabel');
+const badgesEl = document.getElementById('badges');
+const turboTouch = document.getElementById('turboTouch');
+
+const HS_KEY = 'pixelracer.best.v2';
 let best = +localStorage.getItem(HS_KEY) || 0; bestEl.textContent = best;
 
 /* ====== Audio (simple beeps) ====== */
@@ -141,7 +166,11 @@ function blip(freq=800,dur=0.06, type='square', vol=0.1){
 const sfx = {
   coin: ()=> blip(1200,0.07,'triangle',0.12),
   lane: ()=> blip(600,0.05,'square',0.08),
-  crash:()=> { blip(200,0.18,'sawtooth',0.15); setTimeout(()=>blip(120,0.2,'sawtooth',0.13),80); }
+  crash:()=> { blip(200,0.18,'sawtooth',0.15); setTimeout(()=>blip(120,0.2,'sawtooth',0.13),80); },
+  pu:   ()=> blip(900,0.1,'triangle',0.14),
+  turboOn: ()=> { blip(700,0.06,'square',0.14); setTimeout(()=>blip(1000,0.06,'square',0.14),70); },
+  turboOff:()=> blip(400,0.08,'sine',0.12),
+  shieldBreak:()=> { blip(500,0.06,'triangle',0.12); setTimeout(()=>blip(350,0.09,'sawtooth',0.13),50); }
 }
 
 /* ====== Game State ====== */
@@ -149,17 +178,25 @@ const lanes = 3;
 const laneW = W/lanes;
 
 let player;           // {lane,y,w,h,color}
-let objs = [];        // cars / coins
+let objs = [];        // cars / coins / powerups
 let roadY = 0;        // scrolling background
-let speed = 4;        // world speed (px/frame)
+let baseSpeed = 4;    // base world speed
 let score = 0, coins = 0;
 let running = true, paused = false, over = false;
+
+// Turbo
+const turbo = {charge:0, max:100, active:false, drain:40 /* per second */, gainCoin:12, gainTime:0.06}; // charge/time gains
+// Power-ups state
+let shield = 0;               // 0/1 (one-hit protect)
+let slowmo = 0;               // ms remaining
 
 function reset(){
   objs.length = 0;
   player = { lane:1, y:H-120, w:laneW*0.55, h:70, color:'#e6f7ff' };
-  speed = 4; score = 0; coins = 0; running=true; paused=false; over=false;
+  baseSpeed = 4; score = 0; coins = 0; running=true; paused=false; over=false;
   roadY = 0; lastSpawn = 0; spawnBase = 900;
+  turbo.charge = 0; turbo.active = false;
+  shield = 0; slowmo = 0;
   updateHUD();
   hideOverlay();
 }
@@ -169,20 +206,24 @@ let lastSpawn = 0;
 let spawnBase = 900; // smaller = more spawns
 
 function rand(min,max){ return Math.random()*(max-min)+min; }
+function pick(a){ return a[(Math.random()*a.length)|0]; }
 
 function spawn(){
-  // 70% enemy car, 30% coin
   const lane = (Math.random()*lanes)|0;
   const x = lane*laneW + laneW*0.5;
-  if(Math.random() < 0.7){
+  const roll = Math.random();
+  if(roll < 0.60){ // enemy car
     const carW = laneW*0.55, carH = rand(70,100);
     objs.push({type:'car',lane,x,y:-carH, w:carW, h:carH, color: pick(['#00f0ff','#ff47ff','#ffe94d','#4dff7a','#22a3ff'])});
-  }else{
+  }else if(roll < 0.82){ // coin
     const r = laneW*0.22;
     objs.push({type:'coin',lane,x,y:-r*2, r, color:'#ffe94d'});
+  }else{ // power-up (shield / slowmo)
+    const kind = Math.random() < 0.5 ? 'shield' : 'slow';
+    const r = laneW*0.22;
+    objs.push({type:'pu',kind,lane,x,y:-r*2, r});
   }
 }
-function pick(a){ return a[(Math.random()*a.length)|0]; }
 
 /* ====== Input ====== */
 function moveLane(d){
@@ -190,19 +231,34 @@ function moveLane(d){
   const nl = Math.max(0, Math.min(lanes-1, player.lane + d));
   if(nl !== player.lane){ player.lane = nl; sfx.lane(); }
 }
+function setTurbo(active){
+  if(active && !turbo.active && turbo.charge>0){
+    turbo.active = true; sfx.turboOn();
+  }else if(!active && turbo.active){
+    turbo.active = false; sfx.turboOff();
+  }
+}
 window.addEventListener('keydown', e=>{
   const k = e.key.toLowerCase();
   if(k==='arrowleft' || k==='a') moveLane(-1);
   if(k==='arrowright'|| k==='d') moveLane(+1);
   if(k==='p') togglePause();
   if(k==='r') reset();
+  if(e.key==='Shift') setTurbo(true);
 });
+window.addEventListener('keyup', e=>{
+  if(e.key==='Shift') setTurbo(false);
+});
+
 document.querySelectorAll('.cbtn').forEach(b=>{
   b.addEventListener('click', ()=>{
     const dir = b.dataset.x === '+1' ? 1 : -1;
     moveLane(dir);
   });
 });
+turboTouch.addEventListener('touchstart', e=>{ e.preventDefault(); setTurbo(true); }, {passive:false});
+turboTouch.addEventListener('touchend',   ()=> setTurbo(false));
+
 pauseBtn.onclick = ()=> togglePause();
 resetBtn.onclick = ()=> reset();
 resumeBtn.onclick = ()=> togglePause();
@@ -219,6 +275,16 @@ function updateHUD(){
   scoreEl.textContent = score;
   coinsEl.textContent = coins;
   bestEl.textContent = best;
+  turboBar.style.width = (100*Math.min(1, turbo.charge/turbo.max)).toFixed(1) + '%';
+  // badges
+  badgesEl.innerHTML = '';
+  if(shield>0){ addBadge('🛡 Shield'); }
+  if(slowmo>0){ addBadge('⏳ Slow-Mo'); }
+  function addBadge(txt){
+    const b = document.createElement('div');
+    b.className='badge'; b.textContent = txt;
+    badgesEl.appendChild(b);
+  }
 }
 
 /* ====== Loop ====== */
@@ -230,7 +296,23 @@ function loop(t){
   const dt = Math.min(32, t-last); last = t;
   if(paused) { draw(); return; }
 
-  // speed scale
+  // difficulty scale
+  if(score && score % 20 === 0) baseSpeed = Math.min(14, 4 + Math.floor(score/20));
+
+  // slow-mo factor
+  if(slowmo>0){ slowmo = Math.max(0, slowmo - dt); }
+  const slowFactor = slowmo>0 ? 0.45 : 1;
+
+  // turbo drain/charge
+  if(turbo.active){
+    turbo.charge = Math.max(0, turbo.charge - turbo.drain*(dt/1000));
+    if(turbo.charge<=0) setTurbo(false);
+  }else{
+    turbo.charge = Math.min(turbo.max, turbo.charge + turbo.gainTime*dt); // passive charge over time
+  }
+
+  // world speed
+  const speed = baseSpeed * (turbo.active ? 1.85 : 1) * slowFactor;
   const s = speed * (dt/16);
   roadY += s;
 
@@ -239,50 +321,69 @@ function loop(t){
   if(lastSpawn >= spawnBase){
     spawn();
     lastSpawn = 0;
-    // quicker spawns as speed grows
-    spawnBase = Math.max(280, 900 - speed*60);
+    // quicker spawns as baseSpeed grows
+    spawnBase = Math.max(260, 900 - baseSpeed*60);
   }
 
   // move objects
   for(let i=objs.length-1;i>=0;i--){
     const o = objs[i];
     o.y += s*1.1;
+
     // collisions
     if(o.type==='car'){
       const px = player.lane*laneW + laneW*0.22;
       if( AABB(px, player.y, player.w, player.h, o.x - o.w/2, o.y, o.w, o.h) ){
-        crash();
-        break;
+        if(shield>0){
+          shield = 0; sfx.shieldBreak();
+          objs.splice(i,1); // smash the car
+        }else{
+          crash(); break;
+        }
       }
     }else if(o.type==='coin'){
       const px = player.lane*laneW + laneW*0.5;
       const dx=px - o.x, dy = (player.y+player.h/2) - (o.y+o.r);
       if(Math.hypot(dx,dy) < o.r + Math.min(player.w,player.h)/3){
         coins += 1; score += 5; sfx.coin(); objs.splice(i,1);
+        turbo.charge = Math.min(turbo.max, turbo.charge + turbo.gainCoin); // coin supercharges turbo
+      }
+    }else if(o.type==='pu'){
+      const px = player.lane*laneW + laneW*0.5;
+      const dx=px - o.x, dy = (player.y+player.h/2) - (o.y+o.r);
+      if(Math.hypot(dx,dy) < o.r + Math.min(player.w,player.h)/3){
+        sfx.pu();
+        if(o.kind==='shield') shield = 1;
+        else if(o.kind==='slow') slowmo = 4000; // 4s slow-mo
+        objs.splice(i,1);
       }
     }
-    // remove off-screen
-    if(o.y > H + 40){ objs.splice(i,1); score += 1; }
-  }
 
-  // difficulty scale
-  if(score && score % 20 === 0) speed = Math.min(14, 4 + Math.floor(score/20));
+    // remove off-screen; scoring
+    if(o.y > H + 40){
+      if(o.type==='car') score += 1; // passing traffic scores
+      objs.splice(i,1);
+    }
+  }
 
   draw(); updateHUD();
 }
+
 function AABB(ax,ay,aw,ah,bx,by,bw,bh){
   return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
 }
 
 /* ====== Draw ====== */
 function draw(){
-  // road bg
+  // road bg (turbo glow)
   const g = cx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#09122a'); g.addColorStop(1,'#050914');
+  g.addColorStop(0, turbo.active ? '#0a1e3f' : '#09122a');
+  g.addColorStop(1, '#050914');
   cx.fillStyle = g; cx.fillRect(0,0,W,H);
 
-  // center lanes + dashed lines scroll
-  cx.strokeStyle = 'rgba(0,240,255,0.25)'; cx.lineWidth = 2;
+  // lane lines (dash scroll)
+  cx.strokeStyle = turbo.active ? 'rgba(255,71,255,0.35)' : 'rgba(0,240,255,0.25)';
+  cx.lineWidth = 2;
   for(let i=1;i<lanes;i++){
     cx.setLineDash([18,18]);
     cx.lineDashOffset = -(roadY%36);
@@ -294,49 +395,75 @@ function draw(){
   objs.forEach(o=>{
     if(o.type==='car'){
       drawCar(o.x - o.w/2, o.y, o.w, o.h, o.color);
-    }else{
+    }else if(o.type==='coin'){
       drawCoin(o.x, o.y, o.r);
+    }else if(o.type==='pu'){
+      drawPU(o.x, o.y, o.r, o.kind);
     }
   });
 
   // player
   const px = player.lane*laneW + laneW*0.22;
   drawCar(px, player.y, player.w, player.h, player.color);
+  if(shield>0){ // shield aura
+    cx.strokeStyle = 'rgba(77,255,122,0.8)';
+    cx.lineWidth = 3;
+    roundRect(px-6, player.y-6, player.w+12, player.h+12, 12);
+    cx.stroke();
+  }
 
   // score readout
-  cx.fillStyle = '#e6f7ff';
-  cx.font = '14px "Press Start 2P"';
+  cx.fillStyle = '#e6f7ff'; cx.font = '14px "Press Start 2P"';
   cx.fillText('SCORE '+score, 12, 24);
   cx.fillText('BEST '+best, 12, 46);
-  cx.fillText('SPD '+speed, 12, 68);
+  cx.fillText('SPD '+(turbo.active?'MAX':Math.round(baseSpeed)), 12, 68);
+  if(turbo.active){
+    cx.fillStyle = '#ff47ff';
+    cx.fillText('TURBO!', W-130, 24);
+  }
 }
 
 function drawCar(x,y,w,h,color){
-  // body
   const lg = cx.createLinearGradient(x,y,x+w,y+h);
   lg.addColorStop(0,color);
   lg.addColorStop(1,'#ffffff22');
-  cx.fillStyle = lg;
-  roundRect(x,y,w,h,8); cx.fill();
-
-  // windows
-  cx.fillStyle = '#001a33';
-  roundRect(x+6,y+8,w-12, h*0.28, 6); cx.fill();
-
-  // lights
-  cx.fillStyle = '#ffe94d';
-  cx.fillRect(x+6, y+h-8, 10, 6);
-  cx.fillRect(x+w-16, y+h-8, 10, 6);
-
-  // outline neon
-  cx.strokeStyle = 'rgba(0,240,255,.35)'; cx.lineWidth = 2;
-  roundRect(x,y,w,h,8); cx.stroke();
+  cx.fillStyle = lg; roundRect(x,y,w,h,8); cx.fill();
+  cx.fillStyle = '#001a33'; roundRect(x+6,y+8,w-12, h*0.28, 6); cx.fill();
+  cx.fillStyle = '#ffe94d'; cx.fillRect(x+6, y+h-8, 10, 6); cx.fillRect(x+w-16, y+h-8, 10, 6);
+  cx.strokeStyle = 'rgba(0,240,255,.35)'; cx.lineWidth = 2; roundRect(x,y,w,h,8); cx.stroke();
+  if(turbo.active){
+    // simple trail
+    cx.fillStyle = 'rgba(255,71,255,0.2)';
+    cx.fillRect(x+4, y+h, w-8, 30);
+  }
 }
-
 function drawCoin(cx_, cy_, r){
   cx.fillStyle = '#2a1d00'; cx.beginPath(); cx.arc(cx_, cy_, r+4, 0, Math.PI*2); cx.fill();
   cx.fillStyle = '#ffe94d'; cx.beginPath(); cx.arc(cx_, cy_, r, 0, Math.PI*2); cx.fill();
   cx.fillStyle = '#fff6'; cx.fillRect(cx_-r*0.4, cy_-r*0.1, r*0.8, r*0.2);
+}
+function drawPU(x, y, r, kind){
+  // ring
+  cx.strokeStyle = kind==='shield' ? 'rgba(77,255,122,0.9)' : 'rgba(0,240,255,0.9)';
+  cx.lineWidth = 3; cx.beginPath(); cx.arc(x, y, r+6, 0, Math.PI*2); cx.stroke();
+  // icon
+  cx.fillStyle = '#000'; cx.beginPath(); cx.arc(x, y, r+2, 0, Math.PI*2); cx.fill();
+  cx.fillStyle = kind==='shield' ? '#4dff7a' : '#00f0ff';
+  if(kind==='shield'){
+    // tiny shield glyph
+    cx.beginPath();
+    cx.moveTo(x, y-r*0.8);
+    cx.lineTo(x+r*0.8, y-r*0.2);
+    cx.lineTo(x, y+r*0.9);
+    cx.lineTo(x-r*0.8, y-r*0.2);
+    cx.closePath(); cx.fill();
+  }else{
+    // hourglass-ish
+    cx.beginPath();
+    cx.moveTo(x-r*0.7, y-r*0.8); cx.lineTo(x+r*0.7, y-r*0.8);
+    cx.lineTo(x-r*0.7, y+r*0.8); cx.lineTo(x+r*0.7, y+r*0.8);
+    cx.closePath(); cx.fill();
+  }
 }
 
 /* util */
@@ -364,3 +491,4 @@ start();
 </script>
 </body>
 </html>
+
