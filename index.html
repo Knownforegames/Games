@@ -1,45 +1,96 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>My Games</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111827;
-      color: white;
-      text-align: center;
-      padding: 40px;
-    }
-    h1 {
-      margin-bottom: 30px;
-    }
-    .menu {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-    }
-    a {
-      display: inline-block;
-      padding: 12px 24px;
-      background: #2563eb;
-      color: white;
-      text-decoration: none;
-      border-radius: 8px;
-      font-size: 18px;
-      transition: background 0.3s;
-    }
-    a:hover {
-      background: #1d4ed8;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My Web Arcade</title>
+<meta name="description" content="Choose a game to play." />
+<style>
+  :root{
+    --bg1:#0b1020; --bg2:#0e162b; --ink:#e6e7eb; --muted:#93a3be; --border:#ffffff22; --glass:rgba(255,255,255,.06);
+    --c1:#22d3ee; --c2:#a78bfa; --c3:#f472b6;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--ink); font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    background:
+      radial-gradient(900px 500px at 100% -10%, rgba(34,211,238,.12), transparent),
+      radial-gradient(800px 400px at -20% 20%, rgba(167,139,250,.12), transparent),
+      linear-gradient(180deg,var(--bg1),var(--bg2));
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:22px 16px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .brand{display:flex;gap:10px;align-items:center;font-weight:800;font-size:clamp(22px,4vw,30px)}
+  .logo{width:30px;height:30px;border-radius:10px;background:conic-gradient(var(--c1),var(--c2),var(--c3),var(--c1));box-shadow:0 0 30px rgba(34,211,238,.25),0 0 30px rgba(167,139,250,.2)}
+  .muted{color:var(--muted)}
+  /* grid + cards */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+  @media (max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:640px){.grid{grid-template-columns:1fr}}
+  .card{position:relative;border:1px solid var(--border);background:var(--glass);border-radius:16px;overflow:hidden;transition:transform .12s ease, box-shadow .12s ease}
+  .card:hover{transform:translateY(-3px); box-shadow:0 20px 48px rgba(0,0,0,.35), 0 0 70px rgba(34,211,238,.12)}
+  .thumb{aspect-ratio:16/9;width:100%;object-fit:cover;display:block}
+  .card-body{padding:12px}
+  .title{display:flex;align-items:center;gap:10px;font-weight:800;margin:0 0 6px}
+  .title img{width:22px;height:22px;border-radius:6px;box-shadow:0 0 14px rgba(34,211,238,.25)}
+  .desc{font-size:13px;color:var(--muted)}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:var(--glass);font-size:12px}
+  .btn{padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:var(--glass);color:#fff;font-weight:700;text-decoration:none}
+  .btn:hover{transform:translateY(-1px)}
+  footer{border-top:1px solid var(--border);text-align:center;color:var(--muted);padding:18px 0;margin-top:26px}
+</style>
 </head>
 <body>
-  <h1>🎮 Game Menu</h1>
-  <div class="menu">
-    <a href="./click-it/">Click It!</a>
-    <a href="./snake/">Snake</a>
-  </div>
+  <main class="wrap">
+    <header>
+      <div class="brand"><span class="logo"></span> My Web Arcade</div>
+      <div class="muted">Pick a game below</div>
+    </header>
+
+    <section class="grid">
+      <!-- CLICK IT! -->
+      <article class="card">
+        <!-- thumbnail image (inline SVG data URL) -->
+        <img class="thumb" alt="Click it! cover"
+             src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><defs><radialGradient id='g' cx='30%' cy='30%'><stop offset='0' stop-color='%23ffffff'/><stop offset='0.06' stop-color='%23cffafe'/><stop offset='0.4' stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></radialGradient></defs><rect width='100%' height='100%' fill='%230f172a'/><circle cx='400' cy='230' r='140' fill='url(%23g)'/><text x='400' y='240' text-anchor='middle' fill='%230b1020' style='font:bold 34px system-ui'>CLICK</text></svg>">
+        <div class="card-body">
+          <h3 class="title">
+            <!-- tiny “picture” icon for the title -->
+            <img alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><defs><linearGradient id='lg' x1='0' x2='1'><stop stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></linearGradient></defs><rect width='24' height='24' rx='6' fill='url(%23lg)'/></svg>">
+            Click it!
+          </h3>
+          <div class="desc">Fast incremental clicker. Tap the glowing orb, buy upgrades, chase big numbers.</div>
+          <div class="row">
+            <span class="pill">Clicker</span>
+            <a class="btn" href="./click-it/">Play</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- SNAKE -->
+      <article class="card">
+        <img class="thumb" alt="Snake cover"
+             src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><rect width='100%' height='100%' fill='%230f172a'/><g transform='translate(260,130)'><rect x='0' y='0' width='40' height='40' rx='6' fill='%2322d3ee'/><rect x='44' y='0' width='40' height='40' rx='6' fill='%2322d3ee'/><rect x='88' y='0' width='40' height='40' rx='6' fill='%2322d3ee'/><rect x='132' y='0' width='40' height='40' rx='6' fill='%2322d3ee'/><rect x='176' y='0' width='40' height='40' rx='6' fill='%23a78bfa'/><circle cx='206' cy='12' r='4' fill='%230b1020'/><circle cx='218' cy='12' r='4' fill='%230b1020'/></g></svg>">
+        <div class="card-body">
+          <h3 class="title">
+            <img alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><defs><linearGradient id='lg2' x1='0' x2='1'><stop stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></linearGradient></defs><rect width='24' height='24' rx='6' fill='url(%23lg2)'/></svg>">
+            Snake
+          </h3>
+          <div class="desc">Classic snake with swipe controls, pause, and saved high score.</div>
+          <div class="row">
+            <span class="pill">Arcade</span>
+            <a class="btn" href="./snake/">Play</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Add more games by duplicating a card and changing the link/labels -->
+    </section>
+
+    <footer>Built for GitHub Pages • Thumbnails are inline SVGs (no extra files)</footer>
+  </main>
 </body>
 </html>
+
