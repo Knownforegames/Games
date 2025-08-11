@@ -41,6 +41,58 @@
   .touch{display:grid;grid-template-columns:repeat(3,70px);gap:10px;justify-content:center;margin-top:10px}
   .dpad{width:70px;height:70px;border-radius:8px;background:#000;border:2px solid var(--neon1);display:grid;place-items:center;box-shadow:0 0 10px var(--neon1)}
   .msg{margin-top:8px;color:var(--muted);font-size:10px}
+
+  /* === Legibility upgrades for the right sidebar === */
+  .panel.solid{
+    background:#0c1224f5;            /* less transparent */
+    border-color:#00f0ffaa;           /* brighter border */
+    box-shadow:0 0 0 2px #000 inset;
+  }
+  .sidebar{ 
+    color:#eaf8ff;
+    font-size:12px;                   /* was 10px */
+    line-height:1.75;
+    letter-spacing:0.2px;
+    text-shadow:0 0 2px #001622;      /* subtle edge crispness */
+  }
+  .sidebar h3{
+    margin:8px 0 10px;
+    font-size:14px;                   /* clearer section titles */
+    color:#bff2ff;
+    text-shadow:0 0 6px #00f0ff;
+  }
+  .sidebar .stats .stat{
+    padding:12px;
+    background:#050a18;               /* solid chip bg */
+    border-color:#00e6ff99;
+  }
+  .sidebar .label{ 
+    font-size:12px;                   /* was 10px */
+    color:#cbefff; 
+  }
+  .sidebar .value{ 
+    font-size:20px;                   /* was 16px */
+    color:#ffffff;
+    text-shadow:0 0 6px #00f0ff55;
+  }
+  .sidebar .msg{
+    color:#d7f4ff;                    /* brighter helper text */
+    font-size:12px;                   /* was 10px */
+    line-height:1.7;
+  }
+  /* Range control: thicker track + neon thumb for readability */
+  #speed{ accent-color:#00f0ff; height:8px; }
+  #speed::-webkit-slider-thumb{
+    width:18px;height:18px;border-radius:4px;
+    background:#ff47ff;border:2px solid #fff;box-shadow:0 0 10px #ff47ff;
+    margin-top:-5px;
+  }
+  #speed::-moz-range-thumb{
+    width:18px;height:18px;border-radius:4px;
+    background:#ff47ff;border:2px solid #fff;box-shadow:0 0 10px #ff47ff;
+  }
+  /* Make scanlines less intense over the panel content area */
+  .panel.solid *{ isolation:isolate; }
 </style>
 </head>
 <body>
@@ -64,7 +116,8 @@
       <div class="msg">Keys: Arrow / WASD • P pause • R restart • Mobile: swipe or D-pad</div>
     </section>
 
-    <aside class="panel">
+    <!-- NOTE: added classes "solid sidebar" for legibility -->
+    <aside class="panel solid sidebar">
       <h3 style="margin:6px 0 10px">Stats</h3>
       <div class="stats">
         <div class="stat"><div class="label">Score</div><div id="score" class="value">0</div></div>
