@@ -39,8 +39,8 @@
   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
   @media (max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:640px){.grid{grid-template-columns:1fr}}
-  .card{position:relative;border:1px solid var(--border);background:var(--glass);border-radius:16px;overflow:hidden;transition:transform .12s ease, box-shadow .12s ease}
-  .card:hover{transform:translateY(-3px); box-shadow:0 20px 48px rgba(0,0,0,.35), 0 0 70px rgba(34,211,238,.12)}
+  a.card{position:relative;border:1px solid var(--border);background:var(--glass);border-radius:16px;overflow:hidden;transition:transform .12s ease, box-shadow .12s ease;display:block;color:inherit;text-decoration:none}
+  a.card:hover{transform:translateY(-3px); box-shadow:0 20px 48px rgba(0,0,0,.35), 0 0 70px rgba(34,211,238,.12)}
   .thumb{aspect-ratio:16/9;width:100%;object-fit:cover;display:block}
   .card-body{padding:12px}
   .heading{display:flex;align-items:center;gap:10px;font-weight:800;margin:0 0 6px}
@@ -65,7 +65,7 @@
 
     <section class="grid">
       <!-- CLICK IT! -->
-      <article class="card">
+      <a class="card" href="./click-it/">
         <img class="thumb" alt="Click it! cover"
              src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><defs><radialGradient id='g' cx='30%' cy='30%'><stop offset='0' stop-color='%23ffffff'/><stop offset='0.06' stop-color='%23cffafe'/><stop offset='0.4' stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></radialGradient></defs><rect width='100%' height='100%' fill='%230f172a'/><circle cx='400' cy='230' r='140' fill='url(%23g)'/><text x='400' y='240' text-anchor='middle' fill='%230b1020' style='font:bold 34px system-ui'>CLICK</text></svg>">
         <div class="card-body">
@@ -76,27 +76,27 @@
           <div class="desc">Fast incremental clicker. Tap the glowing orb, buy upgrades, chase big numbers.</div>
           <div class="row">
             <span class="pill">Clicker</span>
-            <a class="btn" href="./click-it/">Play</a>
+            <span class="btn">Play</span>
           </div>
         </div>
-      </article>
+      </a>
 
-     <!-- SNAKE -->
-<article class="card">
-  <img class="thumb" alt="Snake cover"
-       src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><rect width='100%' height='100%' fill='%230f172a'/><g transform='translate(180,95)'><rect x='0' y='0' width='80' height='80' rx='12' fill='%2322d3ee'/><rect x='84' y='0' width='80' height='80' rx='12' fill='%2322d3ee'/><rect x='168' y='0' width='80' height='80' rx='12' fill='%2322d3ee'/><rect x='252' y='0' width='80' height='80' rx='12' fill='%2322d3ee'/><rect x='336' y='0' width='80' height='80' rx='12' fill='%23a78bfa'/><circle cx='376' cy='20' r='8' fill='%230b1020'/><circle cx='392' cy='20' r='8' fill='%230b1020'/></g></svg>">
-  <div class="card-body">
-    <h3 class="heading">
-      <img class="tiny" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><defs><linearGradient id='lg2' x1='0' x2='1'><stop stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></linearGradient></defs><rect width='24' height='24' rx='6' fill='url(%23lg2)'/></svg>">
-      Snake
-    </h3>
-    <div class="desc">Classic snake with swipe controls, pause, and saved high score.</div>
-    <div class="row">
-      <span class="pill">Arcade</span>
-      <a class="btn" href="./snake/">Play</a>
-    </div>
-  </div>
-</article>
+      <!-- SNAKE -->
+      <a class="card" href="./snake/">
+        <img class="thumb" alt="Snake cover"
+             src="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'><rect width='100%' height='100%' fill='%230f172a'/><g transform='translate(260,130)'><rect x='0' y='0' width='60' height='60' rx='6' fill='%2322d3ee'/><rect x='64' y='0' width='60' height='60' rx='6' fill='%2322d3ee'/><rect x='128' y='0' width='60' height='60' rx='6' fill='%2322d3ee'/><rect x='192' y='0' width='60' height='60' rx='6' fill='%2322d3ee'/><rect x='256' y='0' width='60' height='60' rx='6' fill='%23a78bfa'/><circle cx='276' cy='18' r='6' fill='%230b1020'/><circle cx='292' cy='18' r='6' fill='%230b1020'/></g></svg>">
+        <div class="card-body">
+          <h3 class="heading">
+            <img class="tiny" alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><defs><linearGradient id='lg2' x1='0' x2='1'><stop stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a78bfa'/></linearGradient></defs><rect width='24' height='24' rx='6' fill='url(%23lg2)'/></svg>">
+            Snake
+          </h3>
+          <div class="desc">Classic snake with swipe controls, pause, and saved high score.</div>
+          <div class="row">
+            <span class="pill">Arcade</span>
+            <span class="btn">Play</span>
+          </div>
+        </div>
+      </a>
     </section>
 
     <footer>
@@ -105,4 +105,3 @@
   </main>
 </body>
 </html>
-
