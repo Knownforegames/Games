@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stack Tower</title>
+<style>
+  :root{
+    --bg1:#0b1020; --bg2:#0e162b; --ink:#e6e7eb; --muted:#9ca3af; --border:#ffffff22;
+    --c1:#22d3ee; --c2:#a78bfa; --c3:#f472b6; --c4:#34d399; --c5:#f59e0b;
+  }
+  html,body{height:100%} *{box-sizing:border-box}
+  body{
+    margin:0; color:var(--ink); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    background:
+      radial-gradient(900px 500px at 100% -10%, rgba(34,211,238,.12), transparent),
+      radial-gradient(800px 400px at -20% 20%, rgba(167,139,250,.12), transparent),
+      linear-gradient(180deg,var(--bg1),var(--bg2));
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:14px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  h1{margin:0;font-size:clamp(22px,4vw,30px)}
+  .btn{padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:#ffffff12;color:#fff;font-weight:700;cursor:pointer}
+  .panel{position:relative;border:1px solid var(--border);background:#111827cc;border-radius:16px;padding:10px}
+  canvas{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--border);background:#0b1224}
+  .stats{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
+  .chip{border:1px solid var(--border);background:#ffffff10;border-radius:999px;padding:6px 10px;font-size:13px}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px}
+
+  /* Share overlay */
+  .overlay{
+    position:absolute; inset:10px; display:none; place-items:center;
+    background:rgba(0,0,0,.45); border-radius:12px;
+  }
+  .share{
+    width:min(520px,90%); border:1px solid var(--border); border-radius:14px;
+    background:#0f172acc; backdrop-filter: blur(4px);
+    padding:16px; text-align:center;
+  }
+  .share h2{margin:0 0 6px; font-size:28px}
+  .share .muted{color:var(--muted); font-size:13px; margin-bottom:12px}
+  .share .row{display:flex;flex-wrap:wrap; gap:10px; justify-content:center; margin-top:12px}
+  .share .btn{padding:10px 14px}
+  .ok{background:#22c55e22;border-color:#22c55e66}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🧱 Stack Tower</h1>
+    <div>
+      <a class="btn" href="../">← Back to GameDock</a>
+      <button id="resetBtn" class="btn">Reset</button>
+      <button id="pauseBtn" class="btn">Pause</button>
+    </div>
+  </header>
+
+  <section class="panel">
+    <canvas id="cv" width="640" height="900"></canvas>
+
+    <!-- Score Share Overlay -->
+    <div id="overlay" class="overlay">
+      <div class="share">
+        <h2>Game Over</h2>
+        <div class="muted">Nice run! Share your score or jump back in.</div>
+        <div style="display:flex;gap:16px;justify-content:center;margin:10px 0">
+          <div class="chip">Your Score: <b id="finalScore">0</b></div>
+          <div class="chip">Best: <b id="finalBest">0</b></div>
+          <div class="chip">Perfects: <b id="finalPerfects">0</b></div>
+        </div>
+        <div class="row">
+          <button id="againBtn" class="btn ok">Play Again</button>
+          <button id="shareBtn" class="btn">Share</button>
+          <a id="tweetBtn" class="btn" href="#" target="_blank" rel="noopener">Tweet</a>
+          <button id="copyBtn" class="btn">Copy Link</button>
+        </div>
+        <div id="shareMsg" class="muted" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="chip">Level: <span id="lvl">1</span></div>
+      <div class="chip">Best: <span id="best">0</span></div>
+      <div class="chip">Perfects: <span id="perfects">0</span></div>
+    </div>
+    <div class="hint">Tap / click / press SPACE to drop a block. Line it up! Small overhangs get sliced off. Perfect drops give a bonus sound and tiny width forgiveness.</div>
+  </section>
+</div>
+
+<script>
+/* ========= CANVAS + STATE ========= */
+const cv = document.getElementById('cv');
+const cx = cv.getContext('2d');
+const lvlEl = document.getElementById('lvl');
+const bestEl = document.getElementById('best');
+const perfEl = document.getElementById('perfects');
+
+const overlay = document.getElementById('overlay');
+const finalScoreEl = document.getElementById('finalScore');
+const finalBestEl = document.getElementById('finalBest');
+const finalPerfectsEl = document.getElementById('finalPerfects');
+const shareBtn = document.getElementById('shareBtn');
+const tweetBtn = document.getElementById('tweetBtn');
+const copyBtn = document.getElementById('copyBtn');
+const againBtn = document.getElementById('againBtn');
+const shareMsg = document.getElementById('shareMsg');
+
+const HS_KEY = 'stacktower.best.v1';
+let best = +localStorage.getItem(HS_KEY) || 0; bestEl.textContent = best;
+
+const W = cv.width, H = cv.height;
+const BASE_HEIGHT = 26;
+const START_WIDTH = Math.floor(W*0.7);
+const PERFECT_TOL = 6;
+const MIN_WIDTH = 12;
+const COLORS = ['#22d3ee','#a78bfa','#f472b6','#34d399','#f59e0b','#f43f5e'];
+
+let stack, cur, dir, speed, offsetY, running, paused, level, perfects;
+
+/* ========= SOUND ========= */
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const actx = new AudioCtx();
+function beep(freq, dur=0.08, type='sine', gain=0.12){
+  const o = actx.createOscillator();
+  const g = actx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, actx.currentTime);
+  g.gain.linearRampToValueAtTime(gain, actx.currentTime+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
+  o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+dur);
+}
+const sfx = {
+  drop: ()=> beep(220,0.09,'square',0.09),
+  cut:  ()=> { beep(500,0.05,'triangle',0.07); beep(300,0.07,'sine',0.05); },
+  perfect: ()=> { beep(660,0.06,'sine',0.07); setTimeout(()=>beep(880,0.06,'sine',0.06),60); },
+  over: ()=> { beep(200,0.18,'sawtooth',0.12); setTimeout(()=>beep(120,0.22,'sawtooth',0.12),120); }
+};
+
+/* ========= GAME ========= */
+function newGame(){
+  hideOverlay();
+  level = 1; speed = 2.0; perfects = 0; paused = false; running = true;
+  offsetY = 0;
+  stack = [{x:(W-START_WIDTH)/2, y:H-BASE_HEIGHT, w:START_WIDTH, c:0}];
+  cur = { x: 0, y: stack[0].y-BASE_HEIGHT, w: START_WIDTH, c:1, vx: speed };
+  dir = 1;
+  draw(); updateHUD();
+}
+function updateHUD(){
+  lvlEl.textContent = level;
+  perfEl.textContent = perfects;
+  bestEl.textContent = best;
+}
+function color(i){ return COLORS[i % COLORS.length]; }
+function drop(){
+  if(!running){ newGame(); return; }
+  if(paused){ togglePause(); return; }
+
+  const prev = stack[stack.length-1];
+  const overlapL = Math.max(prev.x, cur.x);
+  const overlapR = Math.min(prev.x+prev.w, cur.x+cur.w);
+  const overlap = overlapR - overlapL;
+
+  if(overlap <= 0){
+    running = false; sfx.over();
+    if(level-1 > best){ best = level-1; localStorage.setItem(HS_KEY, best); }
+    updateHUD(); showOverlay(level-1, best, perfects);
+    return;
+  }
+
+  const offset = Math.abs((prev.x + prev.w/2) - (cur.x + cur.w/2));
+  const isPerfect = offset <= PERFECT_TOL;
+  if(isPerfect){
+    cur.x = prev.x; cur.w = prev.w;
+    cur.w = Math.min(prev.w + 1, prev.w + 1);
+    perfects++; sfx.perfect();
+  }else{
+    if(overlap < cur.w){ sfx.cut(); } else { sfx.drop(); }
+    cur.x = overlapL; cur.w = overlap;
+  }
+
+  cur.c = stack[stack.length-1].c + 1;
+  stack.push({x:cur.x, y:cur.y, w:cur.w, c:cur.c});
+
+  if(cur.w < MIN_WIDTH){
+    running = false; sfx.over();
+    if(level > best){ best = level; localStorage.setItem(HS_KEY, best); }
+    updateHUD(); showOverlay(level, best, perfects);
+    return;
+  }
+
+  level++; updateHUD();
+  speed = Math.min(6, speed + 0.05);
+  const nextW = cur.w;
+  const startX = (dir>0) ? -nextW : W;
+  cur = {x: startX, y: stack[stack.length-1].y-BASE_HEIGHT, w: nextW, c:stack[stack.length-1].c+1, vx: dir*speed};
+  dir *= -1;
+
+  const topY = stack[stack.length-1].y;
+  if(topY < H*0.35){
+    const shift = (H*0.35 - topY);
+    for(const b of stack) b.y += shift;
+    cur.y += shift;
+    offsetY += shift;
+  }
+}
+function togglePause(){ paused = !paused; if(!paused) last = performance.now(); }
+let last = 0;
+function loop(t){
+  requestAnimationFrame(loop);
+  if(!running || paused){ draw(); return; }
+  const dt = Math.min(32, t-(last||t)); last = t;
+
+  cur.x += cur.vx * (dt/16);
+  if(cur.x <= -cur.w){ cur.vx = Math.abs(cur.vx); }
+  if(cur.x+cur.w >= W+cur.w){ cur.vx = -Math.abs(cur.vx); }
+
+  draw();
+}
+function draw(){
+  const g = cx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0b1224'); g.addColorStop(1,'#0e1a34');
+  cx.fillStyle = g; cx.fillRect(0,0,W,H);
+
+  cx.strokeStyle = 'rgba(255,255,255,0.06)'; cx.lineWidth = 1;
+  for(let i=1;i<10;i++){
+    cx.beginPath(); cx.moveTo(0, H - i*90 + (offsetY%90)); cx.lineTo(W, H - i*90 + (offsetY%90)); cx.stroke();
+  }
+
+  for(const b of stack){ drawBlock(b.x,b.y,b.w,BASE_HEIGHT,color(b.c)); }
+  drawBlock(cur.x,cur.y,cur.w,BASE_HEIGHT,color(cur.c));
+
+  cx.fillStyle = 'rgba(255,255,255,0.85)';
+  cx.font = '700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+  cx.fillText(`Level ${level}`, 14, 32);
+}
+function drawBlock(x,y,w,h,hex){
+  const lg = cx.createLinearGradient(x, y, x+w, y+h);
+  lg.addColorStop(0, hex);
+  lg.addColorStop(1, lighten(hex, 0.25));
+  cx.fillStyle = lg; roundRect(x,y,w,h,10); cx.fill();
+  cx.fillStyle = 'rgba(255,255,255,0.15)';
+  roundRect(x+4,y+4,w-8,6,4); cx.fill();
+}
+function roundRect(x,y,w,h,r){
+  cx.beginPath();
+  cx.moveTo(x+r,y);
+  cx.arcTo(x+w,y,x+w,y+h,r);
+  cx.arcTo(x+w,y+h,x,y+h,r);
+  cx.arcTo(x,y+h,x,y,r);
+  cx.arcTo(x,y,x+w,y,r);
+  cx.closePath();
+}
+function lighten(hex, amt){
+  const c = hex.replace('#','');
+  const n = parseInt(c,16);
+  let r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  r = Math.min(255, Math.floor(r + (255-r)*amt));
+  g = Math.min(255, Math.floor(g + (255-g)*amt));
+  b = Math.min(255, Math.floor(b + (255-b)*amt));
+  return `rgb(${r},${g},${b})`;
+}
+
+/* ========= SHARE PANEL ========= */
+function showOverlay(score, bestVal, perfectsVal){
+  finalScoreEl.textContent = score;
+  finalBestEl.textContent = bestVal;
+  finalPerfectsEl.textContent = perfectsVal;
+  buildShareLinks(score, bestVal, perfectsVal);
+  overlay.style.display = 'grid';
+}
+function hideOverlay(){ overlay.style.display = 'none'; shareMsg.textContent=''; }
+
+function buildShareLinks(score, bestVal, perfectsVal){
+  // Replace with your real public URL if you want
+  const url = location.origin + location.pathname; // e.g., .../stack-tower/
+  const text = `I reached Level ${score} in Stack Tower on GameDock! 🧱 (Best: ${bestVal}, Perfects: ${perfectsVal})`;
+  // Tweet
+  const tweetURL = new URL('https://twitter.com/intent/tweet');
+  tweetURL.searchParams.set('text', text);
+  tweetURL.searchParams.set('url', url);
+  tweetBtn.href = tweetURL.toString();
+
+  // Share button
+  shareBtn.onclick = async ()=>{
+    try{
+      if(navigator.share){
+        await navigator.share({title:'Stack Tower — GameDock', text, url});
+      }else{
+        await navigator.clipboard.writeText(text + ' ' + url);
+        shareMsg.textContent = 'Copied text to clipboard (no Web Share on this device).';
+      }
+    }catch(e){ shareMsg.textContent = 'Share cancelled.'; }
+  };
+
+  // Copy link
+  copyBtn.onclick = async ()=>{
+    try{
+      await navigator.clipboard.writeText(url + `?score=${score}`);
+      shareMsg.textContent = 'Link copied! Paste it anywhere.';
+    }catch{ shareMsg.textContent = 'Could not copy link.'; }
+  };
+
+  // Play again
+  againBtn.onclick = ()=> newGame();
+}
+
+/* ========= INPUT ========= */
+const resetBtn = document.getElementById('resetBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+function activateAudio(){ if(actx.state === 'suspended') actx.resume(); }
+function onAction(e){ e && e.preventDefault(); activateAudio(); drop(); }
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); onAction(); }
+  if(e.key.toLowerCase()==='p'){ togglePause(); }
+  if(e.key.toLowerCase()==='r'){ newGame(); }
+});
+cv.addEventListener('click', onAction);
+cv.addEventListener('touchstart', onAction, {passive:false});
+resetBtn.onclick = ()=> newGame();
+pauseBtn.onclick = ()=> togglePause();
+
+/* ========= START ========= */
+newGame(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>
+
