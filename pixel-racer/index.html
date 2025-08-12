@@ -1,15 +1,14 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pixel Racer — Retro Neon</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Pixel Racer — Simple</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg1:#05060a; --ink:#e6f7ff; --muted:#7fd0e0; --border:#00f0ff55;
-    --neon1:#00f0ff; --neon2:#ff47ff; --accent:#7dff7a; --warn:#ffed5a;
-    --card:#0a0d17f0; --lane:#0d1325;
+    --bg1:#05060a; --bg2:#0b0e18; --ink:#e6f7ff; --muted:#7fd0e0; --border:#00f0ff55;
+    --neon1:#00f0ff; --neon2:#ff47ff; --lane:#0d1325; --card:#0a0d17f0;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -19,39 +18,42 @@
     background:
       radial-gradient(1200px 700px at 20% -10%, #0d1b2a 0%, #0a0d17 35%, #05060a 100%),
       radial-gradient(800px 600px at 120% 120%, #210b24 0%, transparent 60%);
-    display:flex;align-items:center;justify-content:center;padding:16px;letter-spacing:.4px;
+    display:flex;align-items:center;justify-content:center;padding:16px;
   }
   .wrap{width:min(94vw,900px)}
   header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .title{font-size:clamp(18px,3vw,26px);text-shadow:0 2px 0 #000, 0 0 18px #00f0ff60}
-  .btn{border:2px solid var(--border);background:linear-gradient(180deg,#0d1320,#090c16);
-    color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer}
-  .btn.primary{border-color:#00f0ff99;box-shadow:0 0 26px #00f0ffaa}
+  .btn{
+    border:2px solid var(--border);background:linear-gradient(180deg,#0d1320,#090c16);
+    color:var(--ink);padding:10px 14px;border-radius:12px;cursor:pointer;font-size:12px
+  }
+  .btn.primary{border-color:#00f0ff99;box-shadow:0 0 24px #00f0ffaa}
   .grid{display:grid;grid-template-columns:1fr 420px;gap:16px}
   @media (max-width:860px){.grid{grid-template-columns:1fr}}
   .card{background:var(--card);border:2px solid var(--border);border-radius:18px;padding:14px}
-  .hud{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+  .hud{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
   .pill{font-size:11px;padding:8px 10px;border:2px solid var(--border);border-radius:999px;background:#0c1221}
   .label{color:var(--muted);font-size:10px}
   .value{margin-left:8px}
-  .badge{padding:6px 8px;border:2px solid var(--border);border-radius:10px;font-size:10px;display:inline-flex;gap:6px;align-items:center}
-  .pow-dot{width:10px;height:10px;border-radius:2px;background:var(--neon2)}
-  .pow-dot.shield{background:var(--accent)}
-  .pow-dot.slow{background:var(--warn)}
   canvas{display:block;width:100%;height:auto;border-radius:16px;border:2px solid var(--border);background:#04060c}
   .side h3{margin:0 0 10px;font-size:14px;color:var(--muted)}
   ul{margin:0;padding-left:18px;font-size:11px;line-height:1.5}
   .kbd{border:2px solid var(--border);padding:3px 6px;border-radius:8px;font-size:10px;background:#0b1020}
   footer{margin-top:10px;color:#8bd0ff88;font-size:10px;text-align:center}
+  .tapzones{position:absolute;inset:0;display:none}
+  .zone{position:absolute;top:0;bottom:0}
+  .zone.left{left:0;width:33%}
+  .zone.mid{left:33%;right:33%}
+  .zone.right{right:0;width:33%}
+  @media (hover:none){.tapzones{display:block}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="title">Pixel Racer</div>
+    <div class="title">Pixel Racer — Simple</div>
     <div style="display:flex;gap:8px">
       <button id="btnPause" class="btn">Pause</button>
-      <button id="btnSound" class="btn">Sound: On</button>
       <button id="btnReset" class="btn primary">Restart</button>
     </div>
   </header>
@@ -62,115 +64,88 @@
         <div class="pill"><span class="label">Score</span><span id="score" class="value">00000</span></div>
         <div class="pill"><span class="label">High</span><span id="best" class="value">00000</span></div>
         <div class="pill"><span class="label">Speed</span><span id="speed" class="value">0</span></div>
-        <div class="badge"><div class="pow-dot"></div>Turbo <span id="turboCnt">x0</span></div>
-        <div class="badge"><div class="pow-dot shield"></div>Shield <span id="shieldCnt">x0</span></div>
-        <div class="badge"><div class="pow-dot slow"></div>Slow-Mo <span id="slowCnt">x0</span></div>
       </div>
-      <canvas id="game" width="420" height="700"></canvas>
+      <div style="position:relative">
+        <canvas id="game" width="420" height="700"></canvas>
+        <div class="tapzones" id="tapzones">
+          <div class="zone left"></div><div class="zone mid"></div><div class="zone right"></div>
+        </div>
+      </div>
     </div>
 
     <div class="card side">
       <h3>How to play</h3>
       <ul>
         <li>Move: <span class="kbd">←</span>/<span class="kbd">→</span> or <span class="kbd">A</span>/<span class="kbd">D</span></li>
-        <li>Turbo: <span class="kbd">Space</span> &nbsp; Slow-Mo: <span class="kbd">S</span></li>
-        <li>Pause: <span class="kbd">P</span> or button</li>
+        <li>Pause: <span class="kbd">P</span></li>
+        <li>Mobile: tap left/right; center to pause</li>
       </ul>
       <p style="margin-top:10px;font-size:11px;color:#9fe0ffcc">
-        Grab coins for points. Power-ups: Turbo, Shield, Slow-Mo.
+        Dodge pink traffic, collect yellow coins, survive as speed ramps up.
       </p>
     </div>
   </div>
 
-  <footer>Built with ❤️ for your GameDock. No libraries, runs 100% in-browser.</footer>
+  <footer>No libraries. 100% in-browser canvas.</footer>
 </div>
 
 <script>
 (()=>{
-// ===== Consts
-const W=420,H=700, LANES=3, LANE_W=W/LANES;
-const PLAYER_W=38,PLAYER_H=58, CAR_W=38,CAR_H=58, COIN=16;
-const COLORS={lane:'#0e1430',line:'#18224d',dash:'#1e2b63',player:'#7fd0e0',enemy:'#ff47ff',coin:'#ffed5a',turbo:'#ff47ff',shield:'#7dff7a',slow:'#ffed5a',text:'#e6f7ff'};
+// ===== Constants
+const W=420,H=700, LANES=3, LANE_W=W/LANES, MARGIN=18;
+const PLAYER_W=34,PLAYER_H=54, ENEMY_W=34,ENEMY_H=54, COIN=16;
+const COLORS={ lane:'#0e1430', line:'#18224d', dash:'#1e2b63', player:'#7fd0e0', enemy:'#ff47ff', coin:'#ffed5a', text:'#e6f7ff' };
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const laneX=i=>Math.floor(i)*LANE_W + LANE_W/2;
-const rnd=(a,b)=>Math.random()*(b-a)+a;
 
-// ===== Audio (lazy)
-let audioCtx=null, soundOn=true;
-function ensureAudio(){ if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } }
-function beep(f=440,t=0.07,type='sine',gain=0.04){
-  if(!soundOn) return; ensureAudio(); if(!audioCtx) return;
-  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-  o.type=type; o.frequency.value=f; g.gain.value=gain; o.connect(g); g.connect(audioCtx.destination);
-  o.start(); o.stop(audioCtx.currentTime+t);
-}
-
-// ===== Game state
+// ===== State
 let ctx, paused=false, last=0;
-const START=3.2, MAX=9.0;
-let speed, score, best=+localStorage.getItem('pxr_best')||0;
-let tSlow=0, tTurbo=0;
-let player, cars=[], coins=[], pows=[];
-let powCounts={turbo:0,shield:0,slow:0};
+const START=3, MAX=9;
+let speed, score, best=+localStorage.getItem('pxr_simple_best')||0;
+let player, cars=[], coins=[];
 
-// Per-lane spawn cooldowns **and** real y-gap checks
-let laneEnemyCD=[0,0,0], laneCoinCD=[0,0,0], lanePowCD=[0,0,0];
-const MIN_GAP_BASE=150, MIN_GAP_SCALE=7;
+// spawn control (prevents “columns”)
+let laneCarCD=[0,0,0], laneCoinCD=[0,0,0];
+const CAR_GAP_BASE=140, CAR_GAP_SCALE=7;
 
-// ===== Setup
+// ===== Setup/Reset
 function reset(){
-  speed=START; score=0; tSlow=tTurbo=0;
-  cars.length=0; coins.length=0; pows.length=0;
-  laneEnemyCD=[0,0,0]; laneCoinCD=[0,0,0]; lanePowCD=[0,0,0];
-  powCounts={turbo:0,shield:0,slow:0};
-  player={lane:1,x:laneX(1)-PLAYER_W/2,y:H-PLAYER_H-30,w:PLAYER_W,h:PLAYER_H,inv:0,shield:true};
+  speed=START; score=0;
+  cars.length=0; coins.length=0;
+  laneCarCD=[0,0,0]; laneCoinCD=[0,0,0];
+  player={lane:1,x:laneX(1)-PLAYER_W/2,y:H-PLAYER_H-28,w:PLAYER_W,h:PLAYER_H};
   paused=false; updateHUD();
 }
 
-// ===== Rendering
+// ===== Draw
 function drawRoad(){
-  ctx.fillStyle=COLORS.lane; ctx.fillRect(18,0,W-36,H);
+  ctx.fillStyle=COLORS.lane; ctx.fillRect(MARGIN,0,W-MARGIN*2,H);
   ctx.strokeStyle=COLORS.line; ctx.lineWidth=2;
   for(let i=1;i<LANES;i++){ const x=LANE_W*i; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
   ctx.strokeStyle=COLORS.dash; ctx.lineWidth=6; ctx.setLineDash([18,22]);
-  ctx.lineDashOffset = -(score/4)%40;
-  ctx.beginPath(); ctx.moveTo(laneX(1),0); ctx.lineTo(laneX(1),H); ctx.stroke(); ctx.setLineDash([]);
+  ctx.lineDashOffset=-(score/4)%40; ctx.beginPath();
+  ctx.moveTo(laneX(1),0); ctx.lineTo(laneX(1),H); ctx.stroke(); ctx.setLineDash([]);
 }
 function rect(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(x,y,w,h); ctx.strokeStyle='#0008'; ctx.strokeRect(x+.5,y+.5,w-1,h-1); }
-function car(x,y,w,h,c){ rect(x,y,w,h,c); }
-function coinSprite(x,y,s){ ctx.fillStyle=COLORS.coin; ctx.beginPath(); ctx.arc(x+s/2,y+s/2,s/2,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#0008'; ctx.stroke(); }
-function powSprite(p){ const c=p.type==='turbo'?COLORS.turbo:p.type==='shield'?COLORS.shield:COLORS.slow; rect(p.x,p.y,p.w,p.h,c); ctx.fillStyle='#051018'; ctx.font='bold 12px "Press Start 2P"'; ctx.fillText(p.type==='turbo'?'T':p.type==='shield'?'S':'⏱', p.x+9, p.y+16); }
-function overlay(txt,sub){ ctx.fillStyle='#0009'; ctx.fillRect(0,0,W,H); ctx.fillStyle=COLORS.text; ctx.textAlign='center'; ctx.font='20px "Press Start 2P"'; ctx.fillText(txt,W/2,H/2-10); ctx.font='12px "Press Start 2P"'; if(sub) ctx.fillText(sub,W/2,H/2+18); ctx.textAlign='left'; }
+function carSprite(e){ rect(e.x,e.y,e.w,e.h, COLORS.enemy); }
+function coinSprite(c){ ctx.fillStyle=COLORS.coin; ctx.beginPath(); ctx.arc(c.x+c.s/2,c.y+c.s/2,c.s/2,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#0008'; ctx.stroke(); }
 
-// ===== Spawning helpers
+// ===== Spawning
 function canSpawn(lane, list, newY, minGap){
-  let latest=null;
-  for(const e of list){ if(e.lane===lane && (!latest || e.y>latest.y)) latest=e; }
-  if(!latest) return true;
-  // Correct gap check: distance from previous item to new spawn
-  return (newY - latest.y) >= minGap;
+  let top=null; for(const e of list){ if(e.lane===lane && (!top || e.y>top.y)) top=e; }
+  if(!top) return true; return (newY - top.y) >= minGap;
 }
-function spawnCarLane(l){
-  const newY = -CAR_H-10;
-  const gap = MIN_GAP_BASE + speed*MIN_GAP_SCALE;
-  if(!canSpawn(l, cars, newY, gap)) return;
-  cars.push({lane:l,x:laneX(l)-CAR_W/2,y:newY,w:CAR_W,h:CAR_H,v:speed + rnd(.6,1.8)});
+function spawnCar(l){
+  const y=-ENEMY_H-10, gap=CAR_GAP_BASE + speed*CAR_GAP_SCALE;
+  if(!canSpawn(l,cars,y,gap)) return;
+  cars.push({lane:l,x:laneX(l)-ENEMY_W/2,y,w:ENEMY_W,h:ENEMY_H,v:speed+Math.random()*2});
 }
-function spawnCoinPatternLane(l){
-  const step=44, baseY=-COIN-8, r=Math.random();
-  const patternHeight = (r<0.4?1:r<0.75?2:(3+(Math.random()<0.5?0:1))) * step;
-  // Require a gap before starting a new pattern
-  if(!canSpawn(l, coins, baseY, 110 + speed*5)) return;
-
-  if(r<0.4){ coins.push({lane:l,x:laneX(l)-COIN/2,y:baseY,s:COIN,v:speed}); }
-  else if(r<0.75){ for(let k=0;k<2;k++) coins.push({lane:l,x:laneX(l)-COIN/2,y:baseY - k*step,s:COIN,v:speed}); }
-  else { const n=3+(Math.random()<0.5?0:1); for(let k=0;k<n;k++) coins.push({lane:l,x:laneX(l)-COIN/2,y:baseY - k*step,s:COIN,v:speed}); }
-}
-function spawnPowLane(l){
-  const newY=-24;
-  if(!canSpawn(l, pows, newY, 220)) return;
-  const t=['turbo','shield','slow'][(Math.random()*3)|0];
-  pows.push({type:t,lane:l,x:laneX(l)-16,y:newY,w:32,h:24,v:speed});
+function spawnCoinPattern(l){
+  const y=-COIN-8, step=44, r=Math.random();
+  // require small gap from last coin in lane
+  if(!canSpawn(l,coins,y,100 + speed*4)) return;
+  if(r<0.5){ coins.push({lane:l,x:laneX(l)-COIN/2,y,s:COIN}); }
+  else { const n=(r<0.8?2:3); for(let k=0;k<n;k++) coins.push({lane:l,x:laneX(l)-COIN/2,y:y-k*step,s:COIN}); }
 }
 
 // ===== Logic
@@ -179,58 +154,31 @@ function toLaneX(l){ return laneX(l)-PLAYER_W/2; }
 
 function update(dt){
   if(paused) return;
+  // ramp
+  speed = Math.min(MAX, speed + dt*0.05);
 
-  // speed ramp
-  speed = Math.min(MAX, speed + dt*0.055);
-
-  // lane cooldowns tick
+  // lane timers
   for(let i=0;i<LANES;i++){
-    laneEnemyCD[i]=Math.max(0,laneEnemyCD[i]-dt);
+    laneCarCD[i]=Math.max(0,laneCarCD[i]-dt);
     laneCoinCD[i]=Math.max(0,laneCoinCD[i]-dt);
-    lanePowCD[i]=Math.max(0,lanePowCD[i]-dt);
-
-    if(laneEnemyCD[i]===0 && Math.random()<0.55){ spawnCarLane(i); laneEnemyCD[i]=Math.max(0.40, rnd(0.8,1.1) - speed*0.03); }
-    if(laneCoinCD[i]===0  && Math.random()<0.40){ spawnCoinPatternLane(i); laneCoinCD[i]=rnd(0.7,1.1); }
-    if(lanePowCD[i]===0   && Math.random()<0.10){ spawnPowLane(i); lanePowCD[i]=rnd(3.2,4.6); }
+    if(laneCarCD[i]===0 && Math.random()<0.55){ spawnCar(i); laneCarCD[i]=Math.max(0.35, 0.95 - speed*0.03 + Math.random()*0.2); }
+    if(laneCoinCD[i]===0 && Math.random()<0.4){ spawnCoinPattern(i); laneCoinCD[i]=0.7 + Math.random()*0.4; }
   }
 
-  const slowMul = tSlow>0?0.45:1, v = 60*dt*slowMul;
-  cars.forEach(c=> c.y += (c.v)*v/10);
+  const v = 60*dt;
+  cars.forEach(e=> e.y += (e.v)*v/10);
   coins.forEach(c=> c.y += speed*v/10);
-  pows.forEach(p=> p.y += speed*v/10);
 
-  if(tSlow>0){ tSlow-=dt; if(tSlow<=0) speed=Math.max(speed,START); }
-  if(tTurbo>0){ tTurbo-=dt; }
-
-  // coins
+  // collisions
   for(let i=coins.length-1;i>=0;i--){
     const c=coins[i];
     if(c.y>H+8){ coins.splice(i,1); continue; }
-    if(hit(player,{x:c.x,y:c.y,w:c.s,h:c.s})){ coins.splice(i,1); score+=25; beep(880,.06,'square',0.03); }
+    if(hit(player,{x:c.x,y:c.y,w:c.s,h:c.s})){ coins.splice(i,1); score+=25; }
   }
-  // powerups
-  for(let i=pows.length-1;i>=0;i--){
-    const p=pows[i]; if(p.y>H+24){ pows.splice(i,1); continue; }
-    if(hit(player,p)){
-      pows.splice(i,1);
-      if(p.type==='turbo') powCounts.turbo++;
-      if(p.type==='shield') powCounts.shield++;
-      if(p.type==='slow')  powCounts.slow++;
-      beep(1200,.09,'triangle',0.04);
-    }
-  }
-  // cars
   for(let i=cars.length-1;i>=0;i--){
-    const e=cars[i]; if(e.y>H+CAR_H){ cars.splice(i,1); continue; }
-    if(hit(player,e)){
-      if(player.shield || powCounts.shield>0){
-        player.shield=false; if(powCounts.shield>0) powCounts.shield--;
-        player.inv=1.0; beep(200,.1,'sawtooth',0.05);
-      }else{
-        paused=true; best=Math.max(best,score); localStorage.setItem('pxr_best',best);
-        beep(160,.2,'sawtooth',0.06);
-      }
-    }
+    const e=cars[i];
+    if(e.y>H+ENEMY_H){ cars.splice(i,1); continue; }
+    if(hit(player,e)){ paused=true; best=Math.max(best,score); localStorage.setItem('pxr_simple_best',best); }
   }
 
   score += (speed*2|0);
@@ -239,12 +187,11 @@ function update(dt){
 function draw(){
   ctx.clearRect(0,0,W,H);
   drawRoad();
-  cars.forEach(e=>car(e.x,e.y,e.w,e.h,COLORS.enemy));
-  coins.forEach(c=>coinSprite(c.x,c.y,c.s));
-  pows.forEach(p=>powSprite(p));
-  car(player.x,player.y,player.w,player.h,COLORS.player);
+  cars.forEach(carSprite);
+  coins.forEach(coinSprite);
+  rect(player.x,player.y,player.w,player.h, COLORS.player);
   ctx.fillStyle='#7fd0e0aa'; ctx.font='10px "Press Start 2P"';
-  ctx.fillText('← → Move | Space Turbo | S Slow | P Pause',10,16);
+  ctx.fillText('← → Move | P Pause', 10, 16);
 }
 
 // ===== HUD & Controls
@@ -252,20 +199,20 @@ function updateHUD(){
   document.getElementById('score').textContent=String(score).padStart(5,'0');
   document.getElementById('best').textContent=String(best).padStart(5,'0');
   document.getElementById('speed').textContent=(speed*10|0);
-  document.getElementById('turboCnt').textContent='x'+powCounts.turbo;
-  document.getElementById('shieldCnt').textContent='x'+(powCounts.shield + (player.shield?1:0));
-  document.getElementById('slowCnt').textContent='x'+powCounts.slow;
 }
 function move(dir){ player.lane=clamp(player.lane+dir,0,LANES-1); player.x=toLaneX(player.lane); }
-function doTurbo(){ if(powCounts.turbo<=0) return; powCounts.turbo--; tTurbo=1.5; beep(900,.16,'square',0.06); }
-function doSlow(){ if(powCounts.slow<=0) return; powCounts.slow--; tSlow=3.0; speed=Math.max(2.2,speed*0.45); beep(500,.12,'sine',0.05); }
 function togglePause(){ paused=!paused; document.getElementById('btnPause').textContent=paused?'Resume':'Pause'; if(!paused){ last=performance.now(); requestAnimationFrame(loop); } }
 
 // ===== Loop
 function loop(now){
   const dt=Math.min(0.05,(now-last)/1000||0); last=now;
   update(dt); draw(); updateHUD();
-  if(paused){ overlay('Paused','Press P or Resume'); return; }
+  if(paused){
+    ctx.fillStyle='#0009'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=COLORS.text; ctx.textAlign='center'; ctx.font='20px "Press Start 2P"';
+    ctx.fillText('Paused',W/2,H/2-10); ctx.font='12px "Press Start 2P"'; ctx.fillText('Press P or Resume',W/2,H/2+18);
+    ctx.textAlign='left'; return;
+  }
   requestAnimationFrame(loop);
 }
 
@@ -274,21 +221,24 @@ function init(){
   const c=document.getElementById('game'); ctx=c.getContext('2d');
   reset(); last=performance.now(); requestAnimationFrame(loop);
 
-  window.addEventListener('keydown',e=>{
+  // keys
+  addEventListener('keydown',e=>{
     if(e.repeat) return;
     if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') move(-1);
     else if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') move(1);
-    else if(e.key===' '){ e.preventDefault(); doTurbo(); }
-    else if(e.key==='s'||e.key==='S') doSlow();
     else if(e.key==='p'||e.key==='P') togglePause();
   });
 
+  // buttons
   document.getElementById('btnPause').onclick=togglePause;
   document.getElementById('btnReset').onclick=()=>{ reset(); if(paused) togglePause(); };
-  document.getElementById('btnSound').onclick=()=>{
-    soundOn=!soundOn; document.getElementById('btnSound').textContent='Sound: '+(soundOn?'On':'Off');
-    if(soundOn) { ensureAudio(); beep(660,.06,'square',0.03); }
-  };
+
+  // mobile taps
+  const tz=document.getElementById('tapzones');
+  tz.addEventListener('touchend',e=>{
+    const x=(e.changedTouches[0]||{}).clientX, w=tz.clientWidth;
+    if(x<w*0.33) move(-1); else if(x>w*0.66) move(1); else togglePause();
+  },{passive:true});
 }
 window.addEventListener('load',init);
 })();
