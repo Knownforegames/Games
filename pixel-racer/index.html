@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Pixel Racer — Simple</title>
+<title>Pixel Racer — Fixed Spawns</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -51,7 +51,7 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="title">Pixel Racer — Simple</div>
+    <div class="title">Pixel Racer</div>
     <div style="display:flex;gap:8px">
       <button id="btnPause" class="btn">Pause</button>
       <button id="btnReset" class="btn primary">Restart</button>
@@ -93,26 +93,33 @@
 (()=>{
 // ===== Constants
 const W=420,H=700, LANES=3, LANE_W=W/LANES, MARGIN=18;
-const PLAYER_W=34,PLAYER_H=54, ENEMY_W=34,ENEMY_H=54, COIN=16;
+const PLAYER_W=34,PLAYER_H=54, CAR_W=34,CAR_H=54, COIN=16;
 const COLORS={ lane:'#0e1430', line:'#18224d', dash:'#1e2b63', player:'#7fd0e0', enemy:'#ff47ff', coin:'#ffed5a', text:'#e6f7ff' };
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const laneX=i=>Math.floor(i)*LANE_W + LANE_W/2;
+const rnd=(a,b)=>Math.random()*(b-a)+a;
 
 // ===== State
 let ctx, paused=false, last=0;
 const START=3, MAX=9;
-let speed, score, best=+localStorage.getItem('pxr_simple_best')||0;
+let speed, score, best=+localStorage.getItem('pxr_best')||0;
 let player, cars=[], coins=[];
 
-// spawn control (prevents “columns”)
-let laneCarCD=[0,0,0], laneCoinCD=[0,0,0];
-const CAR_GAP_BASE=140, CAR_GAP_SCALE=7;
+// --- spawn pacing (per-lane + global) ---
+let laneEnemyCD=[0,0,0];
+let laneCoinCD=[0,0,0];
+let globalCarCD=0;
+let lastCarLane=-1;
+const CAR_MIN_GAP_BASE=150;
+const CAR_MIN_GAP_PER_SPEED=7;
+const CAR_SPAWN_MIN_DELAY=0.28; // seconds between any two car spawns
+const CAR_SOFT_CAP=12;
 
 // ===== Setup/Reset
 function reset(){
   speed=START; score=0;
   cars.length=0; coins.length=0;
-  laneCarCD=[0,0,0]; laneCoinCD=[0,0,0];
+  laneEnemyCD=[0,0,0]; laneCoinCD=[0,0,0]; globalCarCD=0; lastCarLane=-1;
   player={lane:1,x:laneX(1)-PLAYER_W/2,y:H-PLAYER_H-28,w:PLAYER_W,h:PLAYER_H};
   paused=false; updateHUD();
 }
@@ -131,21 +138,29 @@ function carSprite(e){ rect(e.x,e.y,e.w,e.h, COLORS.enemy); }
 function coinSprite(c){ ctx.fillStyle=COLORS.coin; ctx.beginPath(); ctx.arc(c.x+c.s/2,c.y+c.s/2,c.s/2,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#0008'; ctx.stroke(); }
 
 // ===== Spawning
-function canSpawn(lane, list, newY, minGap){
-  let top=null; for(const e of list){ if(e.lane===lane && (!top || e.y>top.y)) top=e; }
-  if(!top) return true; return (newY - top.y) >= minGap;
+function canSpawnInLane(lane, list, newY, minGap){
+  let latest=null;
+  for(const e of list){ if(e.lane===lane && (!latest || e.y>latest.y)) latest=e; }
+  if(!latest) return true;
+  return (newY - latest.y) >= minGap;
 }
-function spawnCar(l){
-  const y=-ENEMY_H-10, gap=CAR_GAP_BASE + speed*CAR_GAP_SCALE;
-  if(!canSpawn(l,cars,y,gap)) return;
-  cars.push({lane:l,x:laneX(l)-ENEMY_W/2,y,w:ENEMY_W,h:ENEMY_H,v:speed+Math.random()*2});
+function spawnCarLane(lane){
+  const y=-CAR_H-10;
+  const minGap = CAR_MIN_GAP_BASE + speed*CAR_MIN_GAP_PER_SPEED;
+  if(!canSpawnInLane(lane, cars, y, minGap)) return false;
+
+  cars.push({lane, x:laneX(lane)-CAR_W/2, y, w:CAR_W, h:CAR_H, v:speed + rnd(.6,1.8)});
+  laneEnemyCD[lane] = Math.max(0.40, rnd(0.80,1.10) - speed*0.03);
+  globalCarCD = CAR_SPAWN_MIN_DELAY;
+  lastCarLane = lane;
+  return true;
 }
-function spawnCoinPattern(l){
+function spawnCoinPattern(lane){
   const y=-COIN-8, step=44, r=Math.random();
   // require small gap from last coin in lane
-  if(!canSpawn(l,coins,y,100 + speed*4)) return;
-  if(r<0.5){ coins.push({lane:l,x:laneX(l)-COIN/2,y,s:COIN}); }
-  else { const n=(r<0.8?2:3); for(let k=0;k<n;k++) coins.push({lane:l,x:laneX(l)-COIN/2,y:y-k*step,s:COIN}); }
+  if(!canSpawnInLane(lane, coins, y, 100 + speed*4)) return;
+  if(r<0.5){ coins.push({lane,x:laneX(lane)-COIN/2,y,s:COIN}); }
+  else { const n=(r<0.8?2:3); for(let k=0;k<n;k++) coins.push({lane,x:laneX(lane)-COIN/2,y:y-k*step,s:COIN}); }
 }
 
 // ===== Logic
@@ -157,12 +172,35 @@ function update(dt){
   // ramp
   speed = Math.min(MAX, speed + dt*0.05);
 
-  // lane timers
+  // tick cooldowns
+  globalCarCD = Math.max(0, globalCarCD - dt);
   for(let i=0;i<LANES;i++){
-    laneCarCD[i]=Math.max(0,laneCarCD[i]-dt);
+    laneEnemyCD[i]=Math.max(0,laneEnemyCD[i]-dt);
     laneCoinCD[i]=Math.max(0,laneCoinCD[i]-dt);
-    if(laneCarCD[i]===0 && Math.random()<0.55){ spawnCar(i); laneCarCD[i]=Math.max(0.35, 0.95 - speed*0.03 + Math.random()*0.2); }
-    if(laneCoinCD[i]===0 && Math.random()<0.4){ spawnCoinPattern(i); laneCoinCD[i]=0.7 + Math.random()*0.4; }
+  }
+
+  // CAR SPAWNING (staggered)
+  if(cars.length < CAR_SOFT_CAP && globalCarCD===0){
+    const candidates=[];
+    for(let i=0;i<LANES;i++){
+      if(laneEnemyCD[i]===0){
+        // bias against same or adjacent lane as the last car (reduces walls)
+        const adjPenalty = (lastCarLane>=0 && Math.abs(i-lastCarLane)<=1) ? 0.45 : 0.0;
+        if(Math.random()>adjPenalty) candidates.push(i);
+      }
+    }
+    if(candidates.length){
+      const lane = candidates[(Math.random()*candidates.length)|0];
+      spawnCarLane(lane);
+    }
+  }
+
+  // COINS
+  for(let i=0;i<LANES;i++){
+    if(laneCoinCD[i]===0 && Math.random()<0.40){
+      spawnCoinPattern(i);
+      laneCoinCD[i] = 0.70 + Math.random()*0.40;
+    }
   }
 
   const v = 60*dt;
@@ -177,8 +215,11 @@ function update(dt){
   }
   for(let i=cars.length-1;i>=0;i--){
     const e=cars[i];
-    if(e.y>H+ENEMY_H){ cars.splice(i,1); continue; }
-    if(hit(player,e)){ paused=true; best=Math.max(best,score); localStorage.setItem('pxr_simple_best',best); }
+    if(e.y>H+CAR_H){ cars.splice(i,1); continue; }
+    if(hit(player,e)){
+      paused=true; // game over
+      best=Math.max(best,score); localStorage.setItem('pxr_best',best);
+    }
   }
 
   score += (speed*2|0);
