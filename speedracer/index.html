@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Car Dodge — HTML5 Game</title>
+  <meta name="description" content="Drive a car and dodge walls and rolling tires. Arrow keys / WASD. Mobile touch supported. Single-file HTML game." />
+  <style>
+    :root{
+      --bg:#0b1020;--panel:#0f172a;--ink:#e5ecff;--muted:#9fb0d1;--brand:#24d3ee;--accent:#3b82f6;--danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:radial-gradient(1600px 800px at 20% -20%, #1e293b66, transparent 60%),var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    .wrap{max-width:960px;margin:0 auto;padding:16px}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 12px}
+    h1{font-size:clamp(20px,4vw,28px);margin:0}
+    .hud{display:flex;gap:10px;align-items:center}
+    .pill{background:#0f172a;border:1px solid #1f2a44;border-radius:999px;padding:6px 10px;font-weight:700}
+    .btn{background:var(--accent);color:white;border:0;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#0f172a;border:1px solid #1f2a44;color:#dbe7ff}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+
+    .card{background:#0f172a;border:1px solid #1f2a44;border-radius:14px;padding:12px}
+    canvas{display:block;width:100%;height:auto;border-radius:12px;background:linear-gradient(#0b111f,#0b111f 60%,#08101c)}
+
+    /* overlays */
+    .overlay{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+    .panel{pointer-events:auto;max-width:520px;background:rgba(8,14,26,.8);backdrop-filter:blur(6px);border:1px solid #1f2a44;border-radius:16px;padding:18px;box-shadow:0 10px 30px #00000066;text-align:center}
+    .title{font-weight:900;font-size:clamp(22px,4vw,28px);margin:0 0 4px}
+    .sub{color:var(--muted);margin:0 0 12px}
+
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+    /* mobile controls */
+    .touch{position:absolute;inset:auto 0 12px;display:flex;justify-content:center;gap:12px;pointer-events:none}
+    .touch .tbtn{pointer-events:auto;border:1px solid #1f2a44;background:#0f172acc;color:#e6efff;width:84px;height:84px;border-radius:16px;font-weight:900;font-size:18px}
+
+    footer{color:var(--muted);text-align:center;margin:12px 0}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Car Dodge — HTML5</h1>
+      <div class="hud">
+        <div class="pill">Score: <span id="score">0</span></div>
+        <div class="pill">Best: <span id="best">0</span></div>
+        <button id="pauseBtn" class="btn secondary" aria-label="Pause (P)">Pause</button>
+        <button id="restartBtn" class="btn" aria-label="Restart">Restart</button>
+      </div>
+    </header>
+
+    <div class="card" style="position:relative">
+      <canvas id="game" width="480" height="720" aria-label="Car Dodge Game"></canvas>
+
+      <!-- overlays -->
+      <div id="startOverlay" class="overlay">
+        <div class="panel">
+          <p class="title">Drive & Dodge</p>
+          <p class="sub">Arrow Keys / WASD to move · Space to start · P to pause</p>
+          <div class="grid2" style="margin:10px 0 14px;text-align:left;color:#cfe1ff">
+            <div>
+              <strong>Obstacles</strong>
+              <ul>
+                <li>Walls — wide blocks</li>
+                <li>Tires — rolling circles</li>
+              </ul>
+            </div>
+            <div>
+              <strong>Goal</strong>
+              <ul>
+                <li>Survive as long as you can</li>
+                <li>Difficulty increases over time</li>
+              </ul>
+            </div>
+          </div>
+          <button id="startBtn" class="btn">Start Game</button>
+        </div>
+      </div>
+
+      <div id="gameOverOverlay" class="overlay" style="display:none">
+        <div class="panel">
+          <p class="title">Crashed!</p>
+          <p class="sub">Score: <span id="finalScore">0</span> · Best: <span id="finalBest">0</span></p>
+          <div style="display:flex;gap:10px;justify-content:center">
+            <button id="againBtn" class="btn">Play Again</button>
+            <button id="shareBtn" class="btn secondary">Share</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- mobile touch controls -->
+      <div class="touch" id="touchCtl" aria-hidden="true">
+        <button class="tbtn" data-dir="left">⟵</button>
+        <button class="tbtn" data-dir="up">⟰</button>
+        <button class="tbtn" data-dir="down">⟱</button>
+        <button class="tbtn" data-dir="right">⟶</button>
+      </div>
+    </div>
+
+    <footer>Tip: Press <strong>Space</strong> to start. Avoid walls and tires!</footer>
+  </div>
+
+  <script>
+  ;(() => {
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    // --- Layout: keep fixed internal resolution and scale to fit card width ---
+    function fitCanvas(){
+      const parent = canvas.parentElement;
+      const maxW = parent.clientWidth - 4; // account for borders/padding
+      const scale = Math.min(1, maxW / canvas.width);
+      canvas.style.width = (canvas.width * scale) + 'px';
+      canvas.style.height = (canvas.height * scale) + 'px';
+    }
+    window.addEventListener('resize', fitCanvas); fitCanvas();
+
+    // --- Game State ---
+    const state = {
+      running:false,
+      paused:false,
+      t:0,
+      score:0,
+      best: Number(localStorage.getItem('car_dodge_best')||0),
+      speed: 3.5,
+      spawnEvery: 80, // frames
+      obstacles: [],
+      car: { x: canvas.width/2, y: canvas.height-110, w: 44, h: 70, vx:0, vy:0 },
+      keys: new Set()
+    };
+
+    // UI hooks
+    const scoreEl = document.getElementById('score');
+    const bestEl = document.getElementById('best');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const startOverlay = document.getElementById('startOverlay');
+    const startBtn = document.getElementById('startBtn');
+    const over = document.getElementById('gameOverOverlay');
+    const againBtn = document.getElementById('againBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    const finalScore = document.getElementById('finalScore');
+    const finalBest = document.getElementById('finalBest');
+
+    bestEl.textContent = state.best;
+
+    function reset(){
+      state.t = 0;
+      state.score = 0;
+      state.speed = 3.5;
+      state.spawnEvery = 80;
+      state.obstacles.length = 0;
+      state.car.x = canvas.width/2;
+      state.car.y = canvas.height-110;
+      state.car.vx = 0; state.car.vy = 0;
+    }
+
+    function start(){
+      reset();
+      state.running = true; state.paused = false;
+      startOverlay.style.display = 'none';
+      over.style.display = 'none';
+    }
+
+    function gameOver(){
+      state.running = false;
+      finalScore.textContent = Math.floor(state.score);
+      if (state.score > state.best) { state.best = Math.floor(state.score); localStorage.setItem('car_dodge_best', state.best); }
+      finalBest.textContent = state.best;
+      over.style.display = 'grid';
+    }
+
+    function togglePause(){
+      if(!state.running) return;
+      state.paused = !state.paused;
+      pauseBtn.textContent = state.paused ? 'Resume' : 'Pause';
+    }
+
+    pauseBtn.addEventListener('click', togglePause);
+    restartBtn.addEventListener('click', () => { start(); });
+    startBtn.addEventListener('click', start);
+    againBtn.addEventListener('click', start);
+    shareBtn.addEventListener('click', () => {
+      const text = `I scored ${Math.floor(state.score)} in Car Dodge!`;
+      const url = location.href;
+      const shareData = {title:'Car Dodge', text, url};
+      if(navigator.share){ navigator.share(shareData).catch(()=>{}); }
+      else { prompt('Copy and share your score:', text + ' ' + url); }
+    });
+
+    // --- Input ---
+    function onKey(e, down){
+      const k = e.key.toLowerCase();
+      if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d',' '].includes(k)) e.preventDefault();
+      if(k===' ' && down){ if(!state.running){ start(); } else { togglePause(); } return; }
+      if(k==='p' && down){ togglePause(); return; }
+      if(down) state.keys.add(k); else state.keys.delete(k);
+    }
+    addEventListener('keydown', e=>onKey(e,true));
+    addEventListener('keyup', e=>onKey(e,false));
+
+    // Touch controls
+    const touchCtl = document.getElementById('touchCtl');
+    function updateTouchVisibility(){
+      // show on narrow screens
+      touchCtl.style.display = (innerWidth < 640) ? 'flex' : 'none';
+    }
+    updateTouchVisibility();
+    addEventListener('resize', updateTouchVisibility);
+    touchCtl.addEventListener('touchstart', e => {
+      const btn = e.target.closest('.tbtn'); if(!btn) return;
+      const dir = btn.dataset.dir; btn.dataset.press = '1';
+      if(dir==='left') state.keys.add('arrowleft');
+      if(dir==='right') state.keys.add('arrowright');
+      if(dir==='up') state.keys.add('arrowup');
+      if(dir==='down') state.keys.add('arrowdown');
+    });
+    touchCtl.addEventListener('touchend', e => {
+      for(const b of touchCtl.querySelectorAll('.tbtn')){ b.dataset.press=''; }
+      state.keys.delete('arrowleft');state.keys.delete('arrowright');state.keys.delete('arrowup');state.keys.delete('arrowdown');
+    });
+
+    // --- Obstacles ---
+    function spawnObstacle(){
+      // two types: wall (rect), tire (circle). Random lanes.
+      const type = Math.random() < 0.55 ? 'wall' : 'tire';
+      if(type==='wall'){
+        const gap = 110 + Math.random()*120; // opening size
+        const center = 60 + Math.random()*(canvas.width-120);
+        const y = -40;
+        // two rectangles left/right forming a wall with a gap
+        const left = {type:'wall', x:0, y, w:center - gap/2, h:30, vy: state.speed};
+        const right = {type:'wall', x:center + gap/2, y, w:canvas.width-(center+gap/2), h:30, vy: state.speed};
+        state.obstacles.push(left,right);
+      } else {
+        // tire: circle that rolls downward with slight x drift
+        const r = 16 + Math.random()*12;
+        const o = {type:'tire', x:r+Math.random()*(canvas.width-2*r), y:-r, r, vx:(Math.random()*2-1)*1.2, vy: state.speed+0.5, rot:0, spin:(Math.random()*0.15+0.05)};
+        state.obstacles.push(o);
+      }
+    }
+
+    function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+      return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+    }
+    function circleRectCollide(cx,cy,cr, rx,ry,rw,rh){
+      const nx = Math.max(rx, Math.min(cx, rx+rw));
+      const ny = Math.max(ry, Math.min(cy, ry+rh));
+      const dx = cx - nx, dy = cy - ny; return (dx*dx + dy*dy) <= cr*cr;
+    }
+
+    // --- Update/Draw ---
+    function update(){
+      if(!state.running || state.paused) return;
+      state.t++;
+      // difficulty ramp
+      if(state.t % 300 === 0){ state.speed += 0.35; state.spawnEvery = Math.max(36, state.spawnEvery-4); }
+      if(state.t % state.spawnEvery === 0) spawnObstacle();
+
+      // input
+      const c = state.car; const acc = 0.75; const maxv = 6.5;
+      const left = state.keys.has('a') || state.keys.has('arrowleft');
+      const right = state.keys.has('d') || state.keys.has('arrowright');
+      const up = state.keys.has('w') || state.keys.has('arrowup');
+      const down = state.keys.has('s') || state.keys.has('arrowdown');
+      if(left) c.vx = Math.max(c.vx-acc, -maxv); else if(right) c.vx = Math.min(c.vx+acc, maxv); else c.vx *= 0.85;
+      if(up) c.vy = Math.max(c.vy-acc, -maxv*0.7); else if(down) c.vy = Math.min(c.vy+acc, maxv*0.7); else c.vy *= 0.85;
+      c.x += c.vx; c.y += c.vy;
+      // keep inside road
+      c.x = Math.max(16, Math.min(canvas.width - c.w - 16, c.x));
+      c.y = Math.max(200, Math.min(canvas.height - c.h - 8, c.y));
+
+      // move obstacles
+      for(const o of state.obstacles){
+        if(o.type==='wall'){ o.y += o.vy; }
+        else { o.x += o.vx; o.y += o.vy; o.rot += o.spin; if(o.x<o.r || o.x>canvas.width-o.r) o.vx *= -1; }
+      }
+      // remove off-screen
+      state.obstacles = state.obstacles.filter(o => (o.type==='wall'? o.y < canvas.height+50 : o.y < canvas.height+50));
+
+      // collisions
+      for(const o of state.obstacles){
+        if(o.type==='wall'){
+          if(o.w>0 && rectsOverlap(c.x,c.y,c.w,c.h, o.x,o.y,o.w,o.h)) return gameOver();
+        } else {
+          if(circleRectCollide(o.x,o.y,o.r, c.x,c.y,c.w,c.h)) return gameOver();
+        }
+      }
+
+      // score
+      state.score += 0.1 + state.speed*0.01; // time-based
+      scoreEl.textContent = Math.floor(state.score);
+      bestEl.textContent = state.best;
+    }
+
+    function draw(){
+      // background road
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // road
+      ctx.fillStyle = '#0a1324';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+
+      // lane markers
+      ctx.strokeStyle = '#1f366a';
+      ctx.lineWidth = 2;
+      for(let y=-40;y<canvas.height;y+=40){
+        ctx.beginPath(); ctx.moveTo(canvas.width*0.25, y + (state.t%40)); ctx.lineTo(canvas.width*0.25, y+20 + (state.t%40)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(canvas.width*0.50, y + (state.t%40)); ctx.lineTo(canvas.width*0.50, y+20 + (state.t%40)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(canvas.width*0.75, y + (state.t%40)); ctx.lineTo(canvas.width*0.75, y+20 + (state.t%40)); ctx.stroke();
+      }
+
+      // obstacles
+      for(const o of state.obstacles){
+        if(o.type==='wall'){
+          ctx.fillStyle = '#243b6b';
+          ctx.fillRect(o.x,o.y,o.w,o.h);
+        } else { // tire
+          ctx.save();
+          ctx.translate(o.x,o.y); ctx.rotate(o.rot);
+          ctx.fillStyle = '#111923'; ctx.beginPath(); ctx.arc(0,0,o.r,0,Math.PI*2); ctx.fill();
+          ctx.strokeStyle = '#2a405f'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(0,0,o.r-6,0,Math.PI*2); ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // car
+      const c = state.car;
+      ctx.save();
+      ctx.translate(c.x + c.w/2, c.y + c.h/2);
+      ctx.rotate(c.vx * 0.03);
+      ctx.translate(-c.w/2, -c.h/2);
+      // body
+      const grd = ctx.createLinearGradient(0,0,0,c.h);
+      grd.addColorStop(0,'#27c5f0'); grd.addColorStop(1,'#1767ff');
+      ctx.fillStyle = grd; ctx.fillRect(0,0,c.w,c.h);
+      // windows
+      ctx.fillStyle = '#cfe6ffcc'; ctx.fillRect(6,6,c.w-12,24); ctx.fillRect(6,c.h-30,c.w-12,20);
+      // wheels
+      ctx.fillStyle = '#0a0f16'; ctx.fillRect(-6,6,10,18); ctx.fillRect(c.w-4,6,10,18); ctx.fillRect(-6,c.h-24,10,18); ctx.fillRect(c.w-4,c.h-24,10,18);
+      ctx.restore();
+
+      // top HUD shadow
+      const g = ctx.createLinearGradient(0,0,0,120); g.addColorStop(0,'#0009'); g.addColorStop(1,'#0000');
+      ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,120);
+    }
+
+    function loop(){
+      if(state.running && !state.paused) update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  })();
+  </script>
+</body>
+</html>
