@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Astro Miner — Retro Neon</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#05060a; --ink:#e6f7ff; --muted:#7fd0e0; --border:#00f0ff55;
+    --neon1:#00f0ff; --neon2:#ff47ff; --accent:#7dff7a; --warn:#ffed5a;
+    --card:#0a0d17f0; --lane:#0d1325; --glow:0 0 14px #00f0ff, 0 0 28px #00f0ff33;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;color:var(--ink);
+    font-family:'Press Start 2P',system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    letter-spacing:.4px;
+    background:
+      radial-gradient(1100px 650px at 20% -10%, #0d1b2a 0%, #0a0d17 35%, #05060a 100%),
+      radial-gradient(900px 700px at 120% 120%, #210b24 0%, transparent 60%);
+    display:flex;align-items:center;justify-content:center;padding:16px;
+  }
+  .wrap{width:min(94vw,900px)}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .logo{display:flex;align-items:center;gap:10px;filter:drop-shadow(0 0 10px #00f0ff80)}
+  .cube{width:18px;height:18px;border:3px solid var(--neon1);border-radius:4px;box-shadow:var(--glow)}
+  .title{font-size:clamp(18px,3vw,26px);text-shadow:0 2px 0 #000, 0 0 18px #00f0ff60}
+  .btn{
+    border:2px solid var(--border);color:var(--ink);
+    background:linear-gradient(180deg,#0d1320,#090c16);
+    padding:10px 14px;border-radius:12px;cursor:pointer;transition:transform .05s ease;
+    box-shadow:0 0 0 2px #000 inset, 0 0 18px #00f0ff22;font-size:12px;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{border-color:#00f0ff99;box-shadow:0 0 0 2px #000 inset, 0 0 28px #00f0ffaa}
+  .grid{display:grid;grid-template-columns:1fr 420px;gap:16px}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:2px solid var(--border);border-radius:18px;padding:14px;
+    box-shadow:0 0 24px #000 inset, 0 0 26px #00f0ff18;}
+  .hud{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+  .pill{font-size:11px;padding:8px 10px;border:2px solid var(--border);border-radius:999px;background:#0c1221;box-shadow:0 0 14px #00f0ff33}
+  .label{color:var(--muted);font-size:10px}
+  .value{margin-left:8px}
+  .badge{padding:6px 8px;border:2px solid var(--border);border-radius:10px;font-size:10px;display:inline-flex;gap:6px;align-items:center}
+  .pow-dot{width:10px;height:10px;border-radius:2px;background:var(--neon2);box-shadow:0 0 10px var(--neon2)}
+  .pow-dot.shield{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .pow-dot.slow{background:var(--warn);box-shadow:0 0 10px var(--warn)}
+  canvas{display:block;width:100%;height:auto;border-radius:16px;border:2px solid var(--border);background:#04060c}
+  .side h3{margin:0 0 10px;font-size:14px;color:var(--muted)}
+  ul{margin:0;padding-left:18px;font-size:11px;line-height:1.5}
+  .kbd{border:2px solid var(--border);padding:3px 6px;border-radius:8px;font-size:10px;background:#0b1020}
+  footer{margin-top:10px;color:#8bd0ff88;font-size:10px;text-align:center}
+  .tapzones{position:absolute;inset:0;display:none}
+  .zone{position:absolute;top:0;bottom:0}
+  .zone.left{left:0;width:33%}
+  .zone.middle{left:33%;right:33%}
+  .zone.right{right:0;width:33%}
+  @media (hover:none){.tapzones{display:block}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><div class="cube"></div><div class="title">Astro Miner</div></div>
+    <div style="display:flex;gap:8px">
+      <button id="btnPause" class="btn">Pause</button>
+      <button id="btnSound" class="btn">Sound: On</button>
+      <button id="btnReset" class="btn primary">Restart</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card" style="position:relative">
+      <div class="hud">
+        <div class="pill"><span class="label">Score</span><span id="score" class="value">00000</span></div>
+        <div class="pill"><span class="label">High</span><span id="best" class="value">00000</span></div>
+        <div class="pill"><span class="label">Speed</span><span id="speed" class="value">0</span></div>
+        <div class="badge"><div class="pow-dot shield"></div>Shield <span id="shieldCnt">x0</span></div>
+        <div class="badge"><div class="pow-dot"></div>Magnet <span id="magCnt">x0</span></div>
+        <div class="badge"><div class="pow-dot slow"></div>Slow‑Mo <span id="slowCnt">x0</span></div>
+      </div>
+      <div style="position:relative">
+        <canvas id="game" width="420" height="700"></canvas>
+        <div class="tapzones" id="tapzones">
+          <div class="zone left"></div><div class="zone middle"></div><div class="zone right"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card side">
+      <h3>How to play</h3>
+      <ul>
+        <li>Move: <span class="kbd">←</span>/<span class="kbd">→</span> or <span class="kbd">A</span>/<span class="kbd">D</span> (swipe/tap on mobile)</li>
+        <li>Slow‑Mo: <span class="kbd">S</span> &nbsp; Toggle Magnet: <span class="kbd">M</span></li>
+        <li>Pause: <span class="kbd">P</span> or button</li>
+      </ul>
+      <p style="margin-top:10px;font-size:11px;color:#9fe0ffcc">
+        Mine **crystals** (yellow) and dodge **asteroids** (pink). Power‑ups: <span style="color:#7dff7a">Shield</span>,
+        <span style="color:#ff47ff">Magnet</span> (pulls crystals), <span style="color:#ffed5a">Slow‑Mo</span> (3s).
+      </p>
+    </div>
+  </div>
+
+  <footer>Built with ❤️ for your GameDock. No libraries, runs 100% in‑browser.</footer>
+</div>
+
+<script>
+(()=>{
+// ===== Constants
+const W=420,H=700;
+const LANES=5, LANE_W=W/LANES;
+const SHIP_W=34, SHIP_H=44;
+const ROCK_W=38, ROCK_H=38;
+const CRYS=16;
+
+const COLORS={
+  star:'#0c1530', star2:'#122045',
+  ship:'#7fd0e0', flame:'#00f0ff',
+  rock:'#ff47ff', crystal:'#ffed5a',
+  shield:'#7dff7a', magnet:'#ff47ff', slow:'#ffed5a', text:'#e6f7ff'
+};
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const laneX=i=>Math.floor(i)*LANE_W + LANE_W/2;
+const rnd=(a,b)=>Math.random()*(b-a)+a;
+
+// ===== Audio (lazy)
+let audioCtx=null, soundOn=true;
+function ensureAudio(){ if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } }
+function beep(f=440,t=0.07,type='sine',gain=0.04){
+  if(!soundOn) return; ensureAudio(); if(!audioCtx) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type=type; o.frequency.value=f; g.gain.value=gain; o.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime+t);
+}
+
+// ===== Game State
+let ctx, paused=false, last=0, stars=[];
+const START=2.8, MAX=8.5;
+let speed, score, best=+localStorage.getItem('am_best')||0;
+
+let ship, rocks=[], crystals=[], pows=[];
+let powCounts={shield:0, magnet:0, slow:0};
+let tSlow=0, magnetOn=false;
+
+// per-lane spacing (prevents vertical columns)
+let laneRockCD=[0,0,0,0,0], laneCrystalCD=[0,0,0,0,0], lanePowCD=[0,0,0,0,0];
+const ROCK_GAP_BASE=160, ROCK_GAP_SCALE=7;
+const CRYS_GAP_BASE=100;
+
+// ===== Setup / Reset
+function reset(){
+  speed=START; score=0; tSlow=0; magnetOn=false;
+  rocks.length=0; crystals.length=0; pows.length=0;
+  laneRockCD=[0,0,0,0,0]; laneCrystalCD=[0,0,0,0,0]; lanePowCD=[0,0,0,0,0];
+  powCounts={shield:0,magnet:0,slow:0};
+  ship={lane:Math.floor(LANES/2), x:laneX(Math.floor(LANES/2))-SHIP_W/2, y:H-90, w:SHIP_W, h:SHIP_H, inv:0, shield:false};
+  // stars
+  stars = Array.from({length:80},()=>({x:Math.random()*W, y:Math.random()*H, z:Math.random()<.5?1:2}));
+  paused=false; updateHUD();
+}
+
+// ===== Drawing
+function drawStars(dt){
+  for(const s of stars){
+    s.y += (s.z===1?0.8:1.6) * (1 + speed*0.2);
+    if(s.y>H) { s.y = -2; s.x = Math.random()*W; }
+    ctx.fillStyle = s.z===1?COLORS.star:COLORS.star2;
+    ctx.fillRect(s.x,s.y,s.z===1?1:2,s.z===1?1.5:2);
+  }
+}
+function shipSprite(x,y){
+  // body
+  ctx.fillStyle = COLORS.ship;
+  ctx.fillRect(x,y,SHIP_W,SHIP_H);
+  // nose
+  ctx.fillStyle = '#bff6ff';
+  ctx.fillRect(x+SHIP_W/2-6,y-8,12,8);
+  // flame
+  ctx.fillStyle = COLORS.flame;
+  ctx.fillRect(x+SHIP_W/2-4,y+SHIP_H,8,10);
+  // shield ring
+  if(ship.shield || ship.inv>0){
+    ctx.strokeStyle = COLORS.shield; ctx.lineWidth=2;
+    ctx.strokeRect(x-3,y-3,SHIP_W+6,SHIP_H+6);
+  }
+}
+function rockSprite(r){ ctx.fillStyle=COLORS.rock; ctx.fillRect(r.x,r.y,r.w,r.h); ctx.strokeStyle='#0008'; ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1); }
+function crystalSprite(c){ ctx.fillStyle=COLORS.crystal; ctx.beginPath(); ctx.arc(c.x+c.s/2,c.y+c.s/2,c.s/2,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#0008'; ctx.stroke(); }
+function powSprite(p){
+  const col = p.type==='shield'?COLORS.shield:p.type==='magnet'?COLORS.magnet:COLORS.slow;
+  ctx.fillStyle=col; ctx.fillRect(p.x,p.y,p.w,p.h);
+  ctx.fillStyle='#051018'; ctx.font='bold 12px "Press Start 2P"';
+  ctx.fillText(p.type==='shield'?'S':p.type==='magnet'?'M':'⏱', p.x+8, p.y+16);
+}
+
+// ===== Spawning (with lane cooldown + y-gap checks)
+function canSpawn(lane, list, newY, minGap){
+  let latest=null;
+  for(const e of list){ if(e.lane===lane && (!latest || e.y>latest.y)) latest=e; }
+  if(!latest) return true;
+  return (newY - latest.y) >= minGap;
+}
+
+function spawnRock(l){
+  const newY = -ROCK_H-10, gap = ROCK_GAP_BASE + speed*ROCK_GAP_SCALE;
+  if(!canSpawn(l, rocks, newY, gap)) return;
+  rocks.push({lane:l, x:laneX(l)-ROCK_W/2, y:newY, w:ROCK_W, h:ROCK_H, v:speed + rnd(.6,2)});
+}
+function spawnCrystalPattern(l){
+  const baseY = -CRYS-10, step = 42, r=Math.random();
+  if(!canSpawn(l, crystals, baseY, CRYS_GAP_BASE + speed*5)) return;
+  if(r<0.45){ crystals.push({lane:l,x:laneX(l)-CRYS/2,y:baseY,s:CRYS}); }
+  else if(r<0.8){ for(let k=0;k<2;k++) crystals.push({lane:l,x:laneX(l)-CRYS/2,y:baseY-k*step,s:CRYS}); }
+  else{ const n=3+(Math.random()<0.5?0:1); for(let k=0;k<n;k++) crystals.push({lane:l,x:laneX(l)-CRYS/2,y:baseY-k*step,s:CRYS}); }
+}
+function spawnPow(l){
+  const newY=-24; if(!canSpawn(l,pows,newY,220)) return;
+  const t=['shield','magnet','slow'][(Math.random()*3)|0];
+  pows.push({type:t,lane:l,x:laneX(l)-16,y:newY,w:32,h:24});
+}
+
+// ===== Logic
+function hit(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+function toLaneX(l){ return laneX(l)-SHIP_W/2; }
+
+function update(dt){
+  if(paused) return;
+
+  // speed ramp
+  speed = Math.min(MAX, speed + dt*0.045);
+
+  // stars
+  drawStars(dt);
+
+  // lane cooldowns
+  for(let i=0;i<LANES;i++){
+    laneRockCD[i]=Math.max(0,laneRockCD[i]-dt);
+    laneCrystalCD[i]=Math.max(0,laneCrystalCD[i]-dt);
+    lanePowCD[i]=Math.max(0,lanePowCD[i]-dt);
+
+    if(laneRockCD[i]===0 && Math.random()<0.5){ spawnRock(i); laneRockCD[i]=Math.max(0.35, rnd(0.8,1.15) - speed*0.025); }
+    if(laneCrystalCD[i]===0 && Math.random()<0.45){ spawnCrystalPattern(i); laneCrystalCD[i]=rnd(0.6,1.0); }
+    if(lanePowCD[i]===0 && Math.random()<0.1){ spawnPow(i); lanePowCD[i]=rnd(3.0,4.6); }
+  }
+
+  const slowMul = tSlow>0?0.45:1, v = 60*dt*slowMul;
+
+  // move objects
+  rocks.forEach(r=> r.y += (r.v)*v/10);
+  crystals.forEach(c=> {
+    c.y += speed*v/10;
+    if(magnetOn){
+      const dx = (ship.x+SHIP_W/2) - (c.x+CRYS/2);
+      c.x += clamp(dx,-1.6,1.6);
+    }
+  });
+  pows.forEach(p=> p.y += speed*v/10);
+
+  if(ship.inv>0) ship.inv-=dt;
+  if(tSlow>0){ tSlow-=dt; if(tSlow<=0) speed=Math.max(speed,START); }
+
+  // collisions
+  for(let i=crystals.length-1;i>=0;i--){
+    const c=crystals[i];
+    if(c.y>H+10){ crystals.splice(i,1); continue; }
+    if(hit(ship,{x:c.x,y:c.y,w:c.s,h:c.s})){
+      crystals.splice(i,1); score += 35; beep(1200,.06,'square',0.03);
+    }
+  }
+
+  for(let i=pows.length-1;i>=0;i--){
+    const p=pows[i]; if(p.y>H+24){ pows.splice(i,1); continue; }
+    if(hit(ship,p)){
+      pows.splice(i,1);
+      if(p.type==='shield') powCounts.shield++;
+      if(p.type==='magnet') powCounts.magnet++;
+      if(p.type==='slow') powCounts.slow++;
+      beep(900,.08,'triangle',0.04);
+    }
+  }
+
+  for(let i=rocks.length-1;i>=0;i--){
+    const r=rocks[i]; if(r.y>H+ROCK_H){ rocks.splice(i,1); continue; }
+    if(hit(ship,r)){
+      if(ship.shield || powCounts.shield>0){
+        ship.shield=false; if(powCounts.shield>0) powCounts.shield--;
+        ship.inv=0.9; beep(220,.12,'sawtooth',0.05);
+      }else{
+        paused=true; best=Math.max(best,score); localStorage.setItem('am_best',best);
+        beep(160,.2,'sawtooth',0.06);
+      }
+    }
+  }
+
+  // score
+  score += (speed*1.6|0);
+}
+
+function draw(){
+  // starfield drawn in update()
+  // crystals
+  for(const c of crystals) crystalSprite(c);
+  // powerups
+  for(const p of pows) powSprite(p);
+  // rocks
+  for(const r of rocks) rockSprite(r);
+  // ship
+  shipSprite(ship.x, ship.y);
+
+  // HUD line
+  ctx.fillStyle='#7fd0e0aa'; ctx.font='10px "Press Start 2P"';
+  ctx.fillText('← → Move | S Slow‑Mo | M Magnet | P Pause', 10, 16);
+}
+
+// ===== HUD / Controls
+function updateHUD(){
+  document.getElementById('score').textContent=String(score).padStart(5,'0');
+  document.getElementById('best').textContent=String(best).padStart(5,'0');
+  document.getElementById('speed').textContent=(speed*10|0);
+  document.getElementById('shieldCnt').textContent='x'+(powCounts.shield + (ship.shield?1:0));
+  document.getElementById('magCnt').textContent='x'+(powCounts.magnet + (magnetOn?1:0));
+  document.getElementById('slowCnt').textContent='x'+powCounts.slow;
+}
+
+function move(dir){ // lane snap with a little smoothing
+  ship.lane = clamp(ship.lane+dir,0,LANES-1);
+  ship.x = toLaneX(ship.lane);
+}
+function togglePause(){ paused=!paused; document.getElementById('btnPause').textContent=paused?'Resume':'Pause'; if(!paused){ last=performance.now(); requestAnimationFrame(loop); } }
+
+function doSlow(){ if(powCounts.slow<=0) return; powCounts.slow--; tSlow=3.0; speed=Math.max(2.0, speed*0.45); }
+function toggleMagnet(){ if(magnetOn){ magnetOn=false; return; } if(powCounts.magnet>0){ powCounts.magnet--; magnetOn=true; setTimeout(()=>{ magnetOn=false; }, 5000); } }
+
+// ===== Loop
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000||0); last=now;
+  ctx.clearRect(0,0,W,H);
+  update(dt); draw(); updateHUD();
+  if(paused){ ctx.fillStyle='#0009'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=COLORS.text; ctx.textAlign='center'; ctx.font='20px "Press Start 2P"';
+    ctx.fillText('Paused',W/2,H/2-10); ctx.font='12px "Press Start 2P"'; ctx.fillText('Press P or Resume',W/2,H/2+18); ctx.textAlign='left'; return; }
+  requestAnimationFrame(loop);
+}
+
+// ===== Boot
+function init(){
+  const c=document.getElementById('game'); ctx=c.getContext('2d');
+  reset(); last=performance.now(); requestAnimationFrame(loop);
+
+  window.addEventListener('keydown',e=>{
+    if(e.repeat) return;
+    if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') move(-1);
+    else if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') move(1);
+    else if(e.key==='s'||e.key==='S') doSlow();
+    else if(e.key==='m'||e.key==='M') toggleMagnet();
+    else if(e.key==='p'||e.key==='P') togglePause();
+  });
+
+  // mobile taps
+  const tz=document.getElementById('tapzones');
+  let startX=null;
+  tz.addEventListener('touchstart',e=>{ startX=e.touches[0].clientX; ensureAudio(); },{passive:true});
+  tz.addEventListener('touchmove',e=>{
+    if(startX==null) return;
+    const dx=e.touches[0].clientX - startX;
+    if(Math.abs(dx)>40){ move(dx>0?1:-1); startX=null; }
+  },{passive:true});
+  tz.addEventListener('touchend',e=>{
+    const x=(e.changedTouches[0]||{}).clientX, w=tz.clientWidth;
+    if(x<w*0.33) move(-1); else if(x>w*0.66) move(1); else toggleMagnet();
+    startX=null;
+  });
+
+  // buttons
+  document.getElementById('btnPause').onclick=togglePause;
+  document.getElementById('btnReset').onclick=()=>{ reset(); if(paused) togglePause(); };
+  document.getElementById('btnSound').onclick=()=>{
+    soundOn=!soundOn; document.getElementById('btnSound').textContent='Sound: '+(soundOn?'On':'Off');
+    if(soundOn){ ensureAudio(); beep(660,.06,'square',0.03); }
+  };
+}
+window.addEventListener('load',init);
+})();
+</script>
+</body>
+</html>
